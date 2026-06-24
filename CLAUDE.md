@@ -224,8 +224,14 @@ Demo 验证通过后，更新文档：
 ## 发布流程
 
 1. 确保所有测试通过：`npm test && npm run typecheck && npm run build`
-2. 更新 `package.json` 中的版本号
-3. 创建 git tag：`git tag v{version}`
-4. 推送 tag：`git push origin v{version}`
-5. GitHub Action (`publish.yml`) 自动发布到 npm
+2. 使用 release 脚本更新版本并创建 tag：
+   ```bash
+   npm run release:patch   # 0.1.0 → 0.1.1
+   npm run release:minor   # 0.1.0 → 0.2.0
+   npm run release:major   # 0.1.0 → 1.0.0
+   npm run release patch   # 自定义版本类型
+   ```
+   `npm version` 会自动：更新 `package.json` 版本 → 创建 git commit → 创建 git tag（如 `v0.1.1`）
+3. 推送 commit 和 tag：`git push origin main --tags`
+4. GitHub Action (`publish.yml`) 自动发布到 npm
 
