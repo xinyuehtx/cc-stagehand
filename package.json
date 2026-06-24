@@ -1,0 +1,42 @@
+{
+  "name": "@browserbasehq/stagehand-skill-agent",
+  "version": "0.1.0",
+  "description": "Claude Code as LLM execution engine for Stagehand E2E testing",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "stagehand",
+    "claude",
+    "e2e",
+    "testing",
+    "automation"
+  ],
+  "author": "Browserbase",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.4"
+  },
+  "peerDependencies": {
+    "@browserbasehq/stagehand": "^3.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
