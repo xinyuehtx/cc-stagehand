@@ -9,7 +9,7 @@ const stagehand = new Stagehand({
       ## 选择器策略
       优先使用 data-testid 属性，其次是 aria-label，最后才是 XPath。
     `,
-    claudeArgs: ["--project-dir", "./e2e-skills"],
+    claudeArgs: ["--project-dir", "./examples/basic-test/e2e-skills"],
     logLevel: "info",
   }),
   cacheDir: "./.stagehand-cache",

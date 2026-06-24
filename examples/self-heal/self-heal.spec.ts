@@ -10,7 +10,7 @@ const tracker = new SelfHealTracker({
 const stagehand = new Stagehand({
   env: "LOCAL",
   llmClient: createClaudeCodeLLMClient({
-    claudeArgs: ["--project-dir", "./e2e-skills"],
+    claudeArgs: ["--project-dir", "./examples/self-heal/e2e-skills"],
     onSelfHeal: (event) => {
       tracker.record(event);
     },

@@ -1,5 +1,5 @@
 {
-  "name": "@browserbasehq/stagehand-skill-agent",
+  "name": "@tengxiaohtx/stagehand-cc-agent",
   "version": "0.1.0",
   "description": "Claude Code as LLM execution engine for Stagehand E2E testing",
   "type": "module",
@@ -11,6 +11,11 @@
       "import": "./dist/index.js"
     }
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
@@ -40,3 +45,4 @@
     "node": ">=18.0.0"
   }
 }
+

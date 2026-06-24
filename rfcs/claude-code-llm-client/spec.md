@@ -1,7 +1,7 @@
 # SPEC: Stagehand Claude Code LLMClient 技术规格
 
 **版本：** 1.0  
-**状态：** 草案  
+**状态：** 已批准  
 **日期：** 2026-01-22  
 **依赖 RFC：** RFC v5（已批准）
 

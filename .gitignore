@@ -1,0 +1,6 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.stagehand-cache/
+.stagehand-logs/
+coverage/
