@@ -22,10 +22,10 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "release": "npm version --preid=rc",
-    "release:patch": "npm version patch",
-    "release:minor": "npm version minor",
-    "release:major": "npm version major"
+    "release": "pnpm version --preid=rc",
+    "release:patch": "pnpm version patch",
+    "release:minor": "pnpm version minor",
+    "release:major": "pnpm version major"
   },
   "keywords": [
     "stagehand",
@@ -36,8 +36,9 @@
   ],
   "author": "Browserbase",
   "license": "MIT",
-  "dependencies": {},
+  "packageManager": "pnpm@10.33.4",
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/node": "^20.10.0",
     "typescript": "^5.3.3",
     "vitest": "^1.0.4"

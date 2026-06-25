@@ -13,7 +13,7 @@ describe("ClaudeCodeLLMClient", () => {
     vi.clearAllMocks();
     client = createClaudeCodeLLMClient({
       systemPromptEnhancement: "优先使用 data-testid",
-      claudeArgs: ["--project-dir", "./e2e-skills"],
+      cwd: "./e2e-skills",
       logTarget: "stdout",
     });
   });
@@ -49,10 +49,13 @@ describe("ClaudeCodeLLMClient", () => {
     } as any);
 
     await client.createChatCompletion({
-      messages: [
-        { role: "system", content: "You are a browser automation assistant" },
-        { role: "user", content: "AX Tree: [...]\nInstruction: 点击登录按钮" },
-      ],
+      options: {
+        messages: [
+          { role: "system", content: "You are a browser automation assistant" },
+          { role: "user", content: "AX Tree: [...]\nInstruction: 点击登录按钮" },
+        ],
+      },
+      logger: () => {},
     });
 
     expect(mockSpawn).toHaveBeenCalledWith(
@@ -97,9 +100,12 @@ describe("ClaudeCodeLLMClient", () => {
     } as any);
 
     const result = await client.createChatCompletion({
-      messages: [
-        { role: "user", content: "点击登录按钮" },
-      ],
+      options: {
+        messages: [
+          { role: "user", content: "点击登录按钮" },
+        ],
+      },
+      logger: () => {},
     });
 
     expect(result.choices[0].message.content).toContain("elementId");
@@ -127,7 +133,10 @@ describe("ClaudeCodeLLMClient", () => {
 
     await expect(
       client.createChatCompletion({
-        messages: [{ role: "user", content: "点击登录按钮" }],
+        options: {
+          messages: [{ role: "user", content: "点击登录按钮" }],
+        },
+        logger: () => {},
       })
     ).rejects.toThrow("claude -p exited with code 1");
   });

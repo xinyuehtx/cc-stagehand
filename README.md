@@ -1,4 +1,4 @@
-# @browserbasehq/stagehand-skill-agent
+# @tengxiaohtx/stagehand-cc-agent
 
 **Claude Code as LLM execution engine for Stagehand E2E testing.**
 
@@ -8,7 +8,7 @@
 
 ## What is this?
 
-`@browserbasehq/stagehand-skill-agent` is a custom `LLMClient` for [Stagehand](https://github.com/browserbase/stagehand) that replaces the default LLM with **Claude Code** (`claude -p`). It combines business skill knowledge with Claude Code's reasoning capabilities to generate high-quality, generalizable selectors for E2E tests.
+`@tengxiaohtx/stagehand-cc-agent` is a custom `LLMClient` for [Stagehand](https://github.com/browserbase/stagehand) that replaces the default LLM with **Claude Code** (`claude -p`). It combines business skill knowledge with Claude Code's reasoning capabilities to generate high-quality, generalizable selectors for E2E tests.
 
 ## Why?
 
@@ -36,7 +36,7 @@ Selector breaks:     Claude Code re-generates → [aria-label="Sign In"] → git
 ## Installation
 
 ```bash
-npm install @browserbasehq/stagehand-skill-agent
+npm install @tengxiaohtx/stagehand-cc-agent
 ```
 
 **Prerequisites:**
@@ -48,7 +48,7 @@ npm install @browserbasehq/stagehand-skill-agent
 
 ```typescript
 import { Stagehand } from "@browserbasehq/stagehand";
-import { createClaudeCodeLLMClient } from "@browserbasehq/stagehand-skill-agent";
+import { createClaudeCodeLLMClient } from "@tengxiaohtx/stagehand-cc-agent";
 
 const stagehand = new Stagehand({
   env: "LOCAL",
@@ -56,7 +56,7 @@ const stagehand = new Stagehand({
     systemPromptEnhancement: `
       Prefer data-testid attributes, then aria-label, then XPath.
     `,
-    claudeArgs: ["--project-dir", "./e2e-skills"],
+    cwd: "./e2e-skills",
     logLevel: "info",
   }),
   cacheDir: "./.stagehand-cache",
@@ -102,6 +102,7 @@ Creates a custom `LLMClient` for Stagehand.
 |--------|------|---------|-------------|
 | `systemPromptEnhancement` | `string` | `""` | Extra instructions appended to Stagehand's system prompt |
 | `claudeArgs` | `string[]` | `[]` | Additional `claude -p` CLI arguments |
+| `cwd` | `string` | — | Working directory for Claude Code (used to discover `CLAUDE.md` skill files) |
 | `logLevel` | `"debug" \| "info" \| "warn" \| "error"` | `"info"` | Log verbosity |
 | `logTarget` | `"auto" \| "stdout" \| "file"` | `"auto"` | Log destination (auto-detects CI vs local) |
 | `logFilePath` | `string` | `"./.stagehand-logs/llm-client.log"` | Log file path when `logTarget="file"` |
@@ -113,7 +114,7 @@ Creates a custom `LLMClient` for Stagehand.
 Tracks self-heal events and generates git commits.
 
 ```typescript
-import { SelfHealTracker } from "@browserbasehq/stagehand-skill-agent";
+import { SelfHealTracker } from "@tengxiaohtx/stagehand-cc-agent";
 
 const tracker = new SelfHealTracker({ cacheDir: "./.stagehand-cache" });
 tracker.record(event);
@@ -127,7 +128,7 @@ const commitHash = await report.generateGitCommit("fix(e2e): self-heal selectors
 Generates E2E test reports.
 
 ```typescript
-import { E2EReport } from "@browserbasehq/stagehand-skill-agent";
+import { E2EReport } from "@tengxiaohtx/stagehand-cc-agent";
 
 const report = new E2EReport();
 report.addTest(result);
@@ -143,6 +144,7 @@ See the [examples/](examples/) directory:
 |---------|-------------|
 | [basic-test](examples/basic-test/) | Basic E2E test with semantic actions |
 | [self-heal](examples/self-heal/) | Self-healing when selectors break |
+| [mdn-blog](examples/mdn-blog/) | Real-website E2E test — extract blog card data from MDN and navigate to article details |
 | [preheat-selectors](examples/preheat-selectors/) | Pre-generate and cache selectors in bulk |
 
 ## CI Integration

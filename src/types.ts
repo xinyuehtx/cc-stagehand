@@ -10,6 +10,9 @@ export interface ClaudeCodeLLMClientOptions {
   /** claude -p 命令的额外参数 */
   claudeArgs?: string[];
 
+  /** Claude Code 的工作目录（用于发现 CLAUDE.md skill 文件） */
+  cwd?: string;
+
   /** 日志级别 */
   logLevel?: "debug" | "info" | "warn" | "error";
 

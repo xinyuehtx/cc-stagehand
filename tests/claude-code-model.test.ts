@@ -7,7 +7,7 @@ describe("ClaudeCodeLanguageModel", () => {
     const logger = new Logger({ target: "stdout" });
     const model = new ClaudeCodeLanguageModel({
       systemPromptEnhancement: "优先使用 data-testid",
-      claudeArgs: ["--project-dir", "./e2e-skills"],
+      claudeArgs: ["--model", "sonnet"],
       logger,
     });
 
@@ -21,10 +21,8 @@ describe("ClaudeCodeLanguageModel", () => {
     expect(args).toContain("--append-system-prompt");
     expect(args).toContain("--output-format");
     expect(args).toContain("json");
-    expect(args).toContain("--max-turns");
-    expect(args).toContain("1");
-    expect(args).toContain("--project-dir");
-    expect(args).toContain("./e2e-skills");
+    expect(args).toContain("--model");
+    expect(args).toContain("sonnet");
   });
 
   it("应该合并 system prompt 和 enhancement", () => {

@@ -39,15 +39,18 @@ describe("Integration: Stagehand + ClaudeCodeLLMClient", () => {
   it("应该成功创建 LLMClient 并调用 createChatCompletion", async () => {
     const client = createClaudeCodeLLMClient({
       systemPromptEnhancement: "优先使用 data-testid",
-      claudeArgs: ["--project-dir", "./e2e-skills"],
+      cwd: "./e2e-skills",
       logTarget: "stdout",
     });
 
     const result = await client.createChatCompletion({
-      messages: [
-        { role: "system", content: "You are a browser automation assistant" },
-        { role: "user", content: "AX Tree: [...]\nInstruction: 点击登录按钮" },
-      ],
+      options: {
+        messages: [
+          { role: "system", content: "You are a browser automation assistant" },
+          { role: "user", content: "AX Tree: [...]\nInstruction: 点击登录按钮" },
+        ],
+      },
+      logger: () => {},
     });
 
     // 验证返回的响应格式
@@ -72,9 +75,12 @@ describe("Integration: Stagehand + ClaudeCodeLLMClient", () => {
     });
 
     const result = await client.createChatCompletion({
-      messages: [
-        { role: "user", content: "点击登录按钮" },
-      ],
+      options: {
+        messages: [
+          { role: "user", content: "点击登录按钮" },
+        ],
+      },
+      logger: () => {},
     });
 
     expect(result.choices[0].message.content).toBeTruthy();
