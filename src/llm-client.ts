@@ -72,33 +72,35 @@ class ClaudeCodeLLMClient extends LLMClient {
       : undefined;
     const userPrompt = this.extractText(userMessage.content);
 
-    // 如果有 response_model，需要在 system prompt 中明确要求 JSON 输出
+    // 提取 JSON Schema（如果有 response_model）
+    let jsonSchema: object | undefined;
+    const schemaName = options.response_model?.name;
     if (options.response_model) {
-      const jsonSchema = toJsonSchema(options.response_model.schema);
-      const schemaJson = JSON.stringify(jsonSchema, null, 2);
-      const jsonInstruction = `\n\nIMPORTANT: Extract data from the page and return ONLY a valid JSON object (no markdown, no explanation, no schema definition) that matches this structure:\n\`\`\`json\n${schemaJson}\n\`\`\`\nReturn the actual extracted data, not the schema itself.`;
-
-      systemPrompt = systemPrompt
-        ? systemPrompt + jsonInstruction
-        : jsonInstruction;
+      const schema = toJsonSchema(options.response_model.schema);
+      jsonSchema = schema;
+      this.logger.debug("提取 JSON Schema", {
+        schemaName: options.response_model.name,
+        schemaType: schema.type,
+      });
     }
 
-    // 调用 Claude Code
-    const result = await this.model.generate(systemPrompt, userPrompt);
+    // 调用 Claude Code，传递 JSON Schema
+    const result = await this.model.generate(systemPrompt, userPrompt, jsonSchema);
 
     // 根据是否有 response_model 返回不同格式
     if (options.response_model) {
-      return this.toExtractResponse<T>(result);
+      return this.toExtractResponse<T>(result, schemaName);
     }
 
-    return this.toActResponse(result) as unknown as T;
+    return this.toActResponse(result) as unknown as T | LLMParsedResponse<T>;
   }
 
   /**
    * extract 场景：返回 { data, usage }
    */
   private toExtractResponse<T>(
-    result: ClaudeCodeResponse
+    result: ClaudeCodeResponse,
+    schemaName?: string
   ): LLMParsedResponse<T> {
     const usage: LLMUsage = {
       prompt_tokens: Math.ceil((result.result?.length ?? 0) / 4),
@@ -106,9 +108,15 @@ class ClaudeCodeLLMClient extends LLMClient {
       total_tokens: Math.ceil((result.result?.length ?? 0) / 2),
     };
 
+    // 对于 act schema，不需要转换 ID（elementId 需要保持为字符串）
+    const shouldFixIds = schemaName !== "act";
+
     // Claude Code 的 structured_output 已经是结构化 JSON
     if (result.structured_output) {
-      return { data: this.fixNumericIds(result.structured_output) as T, usage };
+      const data = shouldFixIds
+        ? this.fixNumericIds(result.structured_output)
+        : result.structured_output;
+      return { data: data as T, usage };
     }
 
     // 否则尝试从文本中解析 JSON
@@ -125,7 +133,8 @@ class ClaudeCodeLLMClient extends LLMClient {
       try {
         const parsed = JSON.parse(jsonMatch[0]);
         this.logger.debug("成功解析 JSON 对象", { keys: Object.keys(parsed) });
-        return { data: this.fixNumericIds(parsed) as T, usage };
+        const data = shouldFixIds ? this.fixNumericIds(parsed) : parsed;
+        return { data: data as T, usage };
       } catch (parseError) {
         this.logger.warn("无法从 Claude Code 响应中解析 JSON 对象", {
           preview: jsonMatch[0].substring(0, 300),
@@ -140,7 +149,8 @@ class ClaudeCodeLLMClient extends LLMClient {
       try {
         const parsed = JSON.parse(arrayMatch[0]);
         this.logger.debug("成功解析 JSON 数组", { length: parsed.length });
-        return { data: this.fixNumericIds(parsed) as T, usage };
+        const data = shouldFixIds ? this.fixNumericIds(parsed) : parsed;
+        return { data: data as T, usage };
       } catch (parseError) {
         this.logger.warn("无法从 Claude Code 响应中解析 JSON 数组", {
           preview: arrayMatch[0].substring(0, 300),
@@ -155,15 +165,20 @@ class ClaudeCodeLLMClient extends LLMClient {
   }
 
   /**
-   * act 场景：返回标准 LLMResponse
+   * act 场景：返回标准 LLMResponse 格式
+   * 注意：Stagehand 的 act() 实际上会传递 response_model，所以会走 toExtractResponse 路径
+   * 这个方法主要用于单元测试和向后兼容
    */
-  private toActResponse(result: ClaudeCodeResponse): LLMResponse {
-    const outputText = result.structured_output
+  private toActResponse(
+    result: ClaudeCodeResponse
+  ): LLMResponse {
+    // 优先使用 structured_output，否则使用 result
+    const content = result.structured_output
       ? JSON.stringify(result.structured_output)
-      : result.result;
+      : result.result ?? "";
 
     return {
-      id: `claude-code-${Date.now()}`,
+      id: `cmpl-${Date.now()}`,
       object: "chat.completion",
       created: Math.floor(Date.now() / 1000),
       model: "claude-code",
@@ -172,16 +187,16 @@ class ClaudeCodeLLMClient extends LLMClient {
           index: 0,
           message: {
             role: "assistant",
-            content: outputText,
+            content: content,
             tool_calls: [],
           },
           finish_reason: "stop",
         },
       ],
       usage: {
-        prompt_tokens: Math.ceil(outputText.length / 4),
-        completion_tokens: Math.ceil(outputText.length / 4),
-        total_tokens: Math.ceil(outputText.length / 2),
+        prompt_tokens: Math.ceil((content?.length ?? 0) / 4),
+        completion_tokens: Math.ceil((content?.length ?? 0) / 4),
+        total_tokens: Math.ceil((content?.length ?? 0) / 2),
       },
     };
   }

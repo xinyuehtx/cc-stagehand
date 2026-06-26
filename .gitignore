@@ -2,5 +2,16 @@ node_modules/
 dist/
 *.tsbuildinfo
 .stagehand-cache/
+!examples/**/.stagehand-cache/
 .stagehand-logs/
 coverage/
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# CDP URL 临时文件
+.cdp-url.tmp
+examples/**/.cdp-url.tmp

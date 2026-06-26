@@ -37,13 +37,8 @@ export interface ClaudeCodeResponse {
   /** 文本结果 */
   result: string;
 
-  /** 结构化输出 */
-  structured_output?: {
-    elementId: string;
-    method: "click" | "fill" | "type" | "press" | "selectOption";
-    arguments?: string[];
-    twoStep?: boolean;
-  };
+  /** 结构化输出（通过 --json-schema 标志获得） */
+  structured_output?: any;
 
   /** 会话 ID */
   session_id: string;

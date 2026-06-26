@@ -12,10 +12,12 @@
 ## 技术栈
 
 - **语言：** TypeScript (ES2022, NodeNext)
-- **测试框架：** Vitest
+- **测试框架：** 
+  - Vitest（单元测试）
+  - Playwright（E2E 测试，与 Stagehand 集成）
 - **构建：** tsc
 - **运行时：** Node.js >= 18
-- **依赖：** `@browserbasehq/stagehand` (peer), `claude` CLI (系统依赖)
+- **依赖：** `@browserbasehq/stagehand` (peer), `claude` CLI (系统依赖), `@playwright/test` (E2E)
 
 ## 常用命令
 
@@ -23,10 +25,17 @@
 # 构建
 npm run build
 
-# 测试
+# 单元测试
 npm test               # 单次运行
 npm run test:watch     # watch 模式
 npm run test:coverage  # 覆盖率
+
+# E2E 测试（Playwright）
+cd examples/mdn-blog
+npm test               # playwright test
+npm run test:ui        # playwright test --ui
+npm run test:headed    # playwright test --headed
+npm run test:report    # playwright show-report
 
 # 类型检查
 npm run typecheck
@@ -51,11 +60,19 @@ npm run typecheck
 │   ├── self-heal/              # 自愈场景
 │   │   ├── self-heal.spec.ts
 │   │   └── e2e-skills/CLAUDE.md
+│   ├── mdn-blog/               # Playwright 集成示例
+│   │   ├── mdn-blog.spec.ts    # Playwright 测试
+│   │   ├── playwright.config.ts
+│   │   └── e2e-skills/CLAUDE.md
 │   └── preheat-selectors/      # 缓存预热脚本
 │       ├── preheat-selectors.ts
 │       └── e2e-skills/CLAUDE.md
 ├── rfcs/                       # RFC / SPEC / User Story 文档
-│   └── claude-code-llm-client/ # 已批准的 RFC 文档集
+│   ├── claude-code-llm-client/ # 已批准的 RFC 文档集
+│   │   ├── rfc.md
+│   │   ├── spec.md
+│   │   └── user-story.md
+│   └── playwright-integration/ # Playwright 集成 RFC
 │       ├── rfc.md
 │       ├── spec.md
 │       └── user-story.md
@@ -220,6 +237,39 @@ Demo 验证通过后，更新文档：
 - **注释：** 公共 API 使用 JSDoc 注释
 - **错误处理：** 使用有意义的错误消息，包含上下文信息
 - **日志：** 通过 `Logger` 类输出，不使用 `console.log`
+
+## Playwright 集成模式
+
+本项目支持使用 Playwright 作为 E2E 测试框架，与 Stagehand 共享浏览器实例。核心架构：
+
+```typescript
+// 1. Stagehand 创建浏览器
+stagehand = new Stagehand({ env: "LOCAL", ... });
+await stagehand.init();
+const cdpUrl = stagehand.connectURL();  // 公开 API，返回 CDP WebSocket URL
+
+// 2. Playwright 连接 CDP
+browser = await chromium.connectOverCDP(cdpUrl);
+
+// 3. Playwright 管理页面 + Stagehand 语义操作
+test("...", async () => {
+  const page = await browser.newPage();     // Playwright 创建页面
+  await page.goto(url);                      // Playwright 导航
+  await stagehand.act("点击...", { page });  // Stagehand 操作，传入 Playwright page
+  await stagehand.extract("提取...", schema, { page });
+  await expect(page).toHaveURL(...);         // Playwright 断言
+  await page.close();
+});
+```
+
+**关键设计原则：**
+- Stagehand 创建浏览器，通过 `connectURL()` 暴露 CDP 端点（公开 API）
+- Playwright 通过 `connectOverCDP()` 连接同一浏览器
+- Playwright 管理页面生命周期（创建、导航、断言、截图、trace）
+- Stagehand 的 `act()`/`extract()` 接收 `{ page }` 参数，内部通过 CDP frame ID 桥接到 V3 Page
+- 核心库 `src/` 零改动
+
+参考示例：`examples/mdn-blog/`，RFC 文档：`rfcs/playwright-integration/`
 
 ## 发布流程
 

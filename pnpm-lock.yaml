@@ -25,18 +25,6 @@ importers:
         specifier: ^1.0.4
         version: 1.6.1(@types/node@20.19.43)
 
-  examples/basic-test:
-    dependencies:
-      '@browserbasehq/stagehand':
-        specifier: ^3.6.0
-        version: 3.6.0(playwright-core@1.61.1)(zod@3.25.76)
-      '@playwright/test':
-        specifier: ^1.61.1
-        version: 1.61.1
-      '@tengxiaohtx/stagehand-cc-agent':
-        specifier: workspace:*
-        version: link:../..
-
   examples/mdn-blog:
     dependencies:
       '@browserbasehq/stagehand':
@@ -48,33 +36,12 @@ importers:
       '@tengxiaohtx/stagehand-cc-agent':
         specifier: workspace:*
         version: link:../..
+      chrome-launcher:
+        specifier: ^1.1.2
+        version: 1.2.1
       zod:
         specifier: ^3.25.76
         version: 3.25.76
-
-  examples/preheat-selectors:
-    dependencies:
-      '@browserbasehq/stagehand':
-        specifier: ^3.6.0
-        version: 3.6.0(playwright-core@1.61.1)(zod@3.25.76)
-      '@playwright/test':
-        specifier: ^1.61.1
-        version: 1.61.1
-      '@tengxiaohtx/stagehand-cc-agent':
-        specifier: workspace:*
-        version: link:../..
-
-  examples/self-heal:
-    dependencies:
-      '@browserbasehq/stagehand':
-        specifier: ^3.6.0
-        version: 3.6.0(playwright-core@1.61.1)(zod@3.25.76)
-      '@playwright/test':
-        specifier: ^1.61.1
-        version: 1.61.1
-      '@tengxiaohtx/stagehand-cc-agent':
-        specifier: workspace:*
-        version: link:../..
 
 packages:
 
@@ -2254,7 +2221,6 @@ snapshots:
       lighthouse-logger: 2.0.2
     transitivePeerDependencies:
       - supports-color
-    optional: true
 
   colorette@2.0.20: {}
 
@@ -2366,8 +2332,7 @@ snapshots:
 
   escape-html@1.0.3: {}
 
-  escape-string-regexp@4.0.0:
-    optional: true
+  escape-string-regexp@4.0.0: {}
 
   estree-walker@3.0.3:
     dependencies:
@@ -2593,8 +2558,7 @@ snapshots:
 
   ipaddr.js@1.9.1: {}
 
-  is-docker@2.2.1:
-    optional: true
+  is-docker@2.2.1: {}
 
   is-promise@4.0.0: {}
 
@@ -2603,7 +2567,6 @@ snapshots:
   is-wsl@2.2.0:
     dependencies:
       is-docker: 2.2.1
-    optional: true
 
   isexe@2.0.0: {}
 
@@ -2640,7 +2603,6 @@ snapshots:
       marky: 1.3.0
     transitivePeerDependencies:
       - supports-color
-    optional: true
 
   local-pkg@0.5.1:
     dependencies:
@@ -2657,8 +2619,7 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  marky@1.3.0:
-    optional: true
+  marky@1.3.0: {}
 
   math-intrinsics@1.1.0: {}
 

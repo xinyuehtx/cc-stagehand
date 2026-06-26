@@ -32,12 +32,13 @@ export class ClaudeCodeLanguageModel {
 
   async generate(
     systemPrompt: string | undefined,
-    userPrompt: string
+    userPrompt: string,
+    jsonSchema?: object
   ): Promise<ClaudeCodeResponse> {
     const startTime = Date.now();
 
     // 1. 构建 claude -p 命令
-    const commandArgs = this.buildCommandArgs(systemPrompt, userPrompt);
+    const commandArgs = this.buildCommandArgs(systemPrompt, userPrompt, jsonSchema);
 
     this.options.logger.debug("Claude Code 命令", {
       command: `claude ${commandArgs.join(" ")}`,
@@ -59,19 +60,34 @@ export class ClaudeCodeLanguageModel {
 
   buildCommandArgs(
     systemPrompt: string | undefined,
-    userPrompt: string
+    userPrompt: string,
+    jsonSchema?: object
   ): string[] {
     const args = ["-p", userPrompt];
 
-    // 追加 system prompt（Stagehand 的 + 增强）
+    // 追加 system prompt（Stagehand 的 + 增强 + JSON Schema 指令）
+    let fullSystemPrompt = "";
+
     if (systemPrompt || this.options.systemPromptEnhancement) {
-      const fullSystemPrompt = [
+      fullSystemPrompt = [
         systemPrompt ?? "",
         this.options.systemPromptEnhancement ?? "",
       ]
         .filter(Boolean)
         .join("\n\n");
+    }
 
+    // 如果提供了 JSON Schema，添加到系统提示中强制结构化输出
+    if (jsonSchema) {
+      const schemaJson = JSON.stringify(jsonSchema, null, 2);
+      const jsonInstruction = `\n\nIMPORTANT: You MUST return ONLY a valid JSON object (no markdown, no explanation, no additional text) that matches this schema:\n\`\`\`json\n${schemaJson}\n\`\`\`\n\nReturn the actual data, not the schema itself. Do not include any text before or after the JSON.`;
+
+      fullSystemPrompt = fullSystemPrompt
+        ? fullSystemPrompt + jsonInstruction
+        : jsonInstruction;
+    }
+
+    if (fullSystemPrompt) {
       args.push("--append-system-prompt", fullSystemPrompt);
     }
 
@@ -99,9 +115,23 @@ export class ClaudeCodeLanguageModel {
       const resultEvent = [...events].reverse().find((e: any) => e.type === "result");
 
       if (resultEvent) {
+        const resultText = resultEvent.result ?? "";
+
+        // 尝试解析结构化输出（当使用 --json-schema 时）
+        let structuredOutput: any;
+        try {
+          structuredOutput = JSON.parse(resultText);
+          this.options.logger.debug("成功解析结构化输出", {
+            keys: Object.keys(structuredOutput),
+          });
+        } catch {
+          // 不是有效的 JSON，当作普通文本
+          this.options.logger.debug("结果不是 JSON 格式，作为普通文本处理");
+        }
+
         return {
-          result: resultEvent.result ?? "",
-          structured_output: undefined, // Claude Code 不直接输出 structured_output
+          result: resultText,
+          structured_output: structuredOutput,
           session_id: resultEvent.session_id ?? "",
           total_cost_usd: resultEvent.total_cost_usd ?? 0,
           cost_usd: resultEvent.usage ?? {},
@@ -122,9 +152,17 @@ export class ClaudeCodeLanguageModel {
               .join("\n")
           : String(content);
 
+        // 尝试解析结构化输出
+        let structuredOutput: any;
+        try {
+          structuredOutput = JSON.parse(text);
+        } catch {
+          // 忽略
+        }
+
         return {
           result: text,
-          structured_output: undefined,
+          structured_output: structuredOutput,
           session_id: assistantEvent.session_id ?? "",
           total_cost_usd: 0,
           cost_usd: {},
