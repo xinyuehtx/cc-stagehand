@@ -30,6 +30,9 @@ export interface ClaudeCodeLLMClientOptions {
 
   /** 是否启用 verbose 模式 */
   verbose?: boolean;
+
+  /** 是否启用 selector 泛化（默认 true） */
+  enableSelectorGeneralization?: boolean;
 }
 
 /** Claude Code 响应格式 */

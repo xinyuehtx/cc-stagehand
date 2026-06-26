@@ -7,12 +7,24 @@ import type {
 } from "@browserbasehq/stagehand";
 import { ClaudeCodeLanguageModel } from "./claude-code-model.js";
 import { Logger } from "./logger.js";
+import { SelectorStore } from "./selector-store.js";
 import type { ClaudeCodeLLMClientOptions, ClaudeCodeResponse } from "./types.js";
+
+/** CSS 选择器生成指令，注入到 act() 的 system prompt 中 */
+const CSS_SELECTOR_INSTRUCTION = `
+IMPORTANT: For the "cssSelector" field in your response, generate a stable, generalized CSS selector for the target element following these rules:
+1. Use semantic HTML tags: article, section, footer, header, nav, main, aside
+2. Use :first-of-type or :nth-of-type(n) for positional disambiguation
+3. Avoid absolute paths, div-based nesting, or index-based selectors
+4. Keep it as short and semantic as possible
+5. The selector must uniquely identify the target element on the page
+Example: "article:first-of-type footer a" for the first article's footer link
+`;
 
 export function createClaudeCodeLLMClient(
   options: ClaudeCodeLLMClientOptions = {}
-): LLMClient {
-  return new ClaudeCodeLLMClient(options);
+): LLMClient & { selectorStore: SelectorStore } {
+  return new ClaudeCodeLLMClient(options) as ClaudeCodeLLMClient;
 }
 
 class ClaudeCodeLLMClient extends LLMClient {
@@ -21,6 +33,11 @@ class ClaudeCodeLLMClient extends LLMClient {
 
   private model: ClaudeCodeLanguageModel;
   private logger: Logger;
+  private enableSelectorGeneralization: boolean;
+  private lastActInstruction: string | undefined;
+
+  /** 内存级 instruction → cssSelector 映射存储 */
+  public selectorStore: SelectorStore;
 
   constructor(options: ClaudeCodeLLMClientOptions) {
     super("claude-code", options.systemPromptEnhancement);
@@ -40,6 +57,8 @@ class ClaudeCodeLLMClient extends LLMClient {
       logger: this.logger,
     });
 
+    this.enableSelectorGeneralization = options.enableSelectorGeneralization !== false;
+    this.selectorStore = new SelectorStore();
     this.modelName = "claude-code";
     this.clientOptions = {};
   }
@@ -84,8 +103,21 @@ class ClaudeCodeLLMClient extends LLMClient {
       });
     }
 
+    // ★ Schema 增强：act 场景注入 cssSelector 字段
+    if (schemaName === "act" && this.enableSelectorGeneralization) {
+      jsonSchema = this.injectCssSelectorField(jsonSchema!);
+      systemPrompt = this.appendCssSelectorInstruction(systemPrompt);
+      // 从 user prompt 中提取 instruction 以便后续匹配
+      this.lastActInstruction = this.extractActInstruction(userPrompt);
+    }
+
     // 调用 Claude Code，传递 JSON Schema
     const result = await this.model.generate(systemPrompt, userPrompt, jsonSchema);
+
+    // ★ 捕获 cssSelector
+    if (schemaName === "act" && this.enableSelectorGeneralization) {
+      this.captureCssSelector(result);
+    }
 
     // 根据是否有 response_model 返回不同格式
     if (options.response_model) {
@@ -256,5 +288,97 @@ class ClaudeCodeLLMClient extends LLMClient {
     }
 
     return obj;
+  }
+
+  // ========== Selector Generalization 相关方法 ==========
+
+  /**
+   * 向 act schema 的 action 对象中注入 cssSelector 字段
+   */
+  private injectCssSelectorField(schema: object): object {
+    const clone = JSON.parse(JSON.stringify(schema));
+
+    // 尝试导航到 action.properties
+    const actionSchema = (clone as any)?.properties?.action;
+    if (!actionSchema) return clone;
+
+    // 处理 nullable 场景（anyOf: [{ properties: ... }, { type: "null" }]）
+    let actionProps: any;
+    if (actionSchema.properties) {
+      actionProps = actionSchema.properties;
+    } else if (Array.isArray(actionSchema.anyOf)) {
+      const objectVariant = actionSchema.anyOf.find(
+        (v: any) => v.type === "object" || v.properties
+      );
+      actionProps = objectVariant?.properties;
+    }
+
+    if (actionProps) {
+      actionProps.cssSelector = {
+        type: "string",
+        description:
+          "A stable, generalized CSS selector for the target element. Use semantic HTML tags (article, section, footer, nav, header), :first-of-type/:nth-of-type() for position. Avoid absolute paths or div-based nesting. Example: 'article:first-of-type footer a'",
+      };
+    }
+
+    return clone;
+  }
+
+  /**
+   * 向 system prompt 追加 CSS 选择器生成指令
+   */
+  private appendCssSelectorInstruction(systemPrompt: string | undefined): string {
+    return (systemPrompt ?? "") + CSS_SELECTOR_INSTRUCTION;
+  }
+
+  /**
+   * 从 user prompt 中提取 act instruction
+   * Stagehand 发送的 user prompt 格式为: "instruction: {instruction}\nAccessibility Tree: ..."
+   */
+  private extractActInstruction(userPrompt: string): string | undefined {
+    // Stagehand wraps the user's instruction in a longer prompt:
+    // "Find the most relevant element to perform an action on given the following action: <USER_INSTRUCTION>.  \n  IF AND ONLY IF..."
+    const stagehandWrap = /Find the most relevant element to perform an action on given the following action:\s*([\s\S]+?)\s*IF AND ONLY IF/;
+    const wrapMatch = userPrompt.match(stagehandWrap);
+    if (wrapMatch) {
+      return wrapMatch[1].trim().replace(/\.$/, '').trim();
+    }
+
+    // Fallback: standard "instruction: ..." format
+    const match = userPrompt.match(/^instruction:\s*(.+?)\nAccessibility Tree:/s);
+    if (match) {
+      return match[1].trim();
+    }
+
+    // Last resort: first line
+    const firstLine = userPrompt.split("\n")[0];
+    if (firstLine.startsWith("instruction:")) {
+      return firstLine.replace(/^instruction:\s*/, "").trim();
+    }
+    return undefined;
+  }
+
+  /**
+   * 从 LLM 响应中捕获 cssSelector 并存入 SelectorStore
+   */
+  private captureCssSelector(result: ClaudeCodeResponse): void {
+    const output = result.structured_output;
+    if (!output?.action?.cssSelector) return;
+
+    const cssSelector = output.action.cssSelector;
+
+    // 基本格式验证：非空、不以 xpath= 开头、不含绝对路径特征
+    if (
+      typeof cssSelector === "string" &&
+      cssSelector.length > 0 &&
+      !cssSelector.startsWith("xpath=") &&
+      !cssSelector.startsWith("/html")
+    ) {
+      const instruction = this.lastActInstruction;
+      if (instruction) {
+        this.selectorStore.set(instruction, cssSelector);
+        this.logger.debug("捕获 cssSelector", { instruction, cssSelector });
+      }
+    }
   }
 }

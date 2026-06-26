@@ -9,6 +9,8 @@
 export { createClaudeCodeLLMClient } from "./llm-client.js";
 export { SelfHealTracker } from "./self-heal.js";
 export { E2EReport } from "./report.js";
+export { SelectorStore } from "./selector-store.js";
+export { generalizeCacheSelectors } from "./cache-updater.js";
 
 // 类型定义
 export type {
@@ -24,3 +26,5 @@ export type {
   ChatMessageContent,
   LLMResponse,
 } from "./types.js";
+
+export type { CacheUpdateOptions, CacheUpdateResult } from "./cache-updater.js";

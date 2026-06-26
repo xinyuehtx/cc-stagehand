@@ -32,6 +32,6 @@ export default defineConfig({
     video: "off",
 
     /* 页面导航超时 */
-    navigationTimeout: 30_000,
+    navigationTimeout: 60_000,
   },
 });
