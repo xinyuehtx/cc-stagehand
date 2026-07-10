@@ -5,7 +5,8 @@ import type {
   LLMParsedResponse,
   LLMUsage,
 } from "@browserbasehq/stagehand";
-import { ClaudeCodeLanguageModel } from "./claude-code-model.js";
+import { createLanguageModelProvider } from "./providers/index.js";
+import type { LanguageModelProvider } from "./providers/types.js";
 import { Logger } from "./logger.js";
 import { SelectorStore } from "./selector-store.js";
 import type { ClaudeCodeLLMClientOptions, ClaudeCodeResponse } from "./types.js";
@@ -31,7 +32,7 @@ class ClaudeCodeLLMClient extends LLMClient {
   type = "claude-code" as const;
   hasVision = false;
 
-  private model: ClaudeCodeLanguageModel;
+  private model: LanguageModelProvider;
   private logger: Logger;
   private enableSelectorGeneralization: boolean;
   private lastActInstruction: string | undefined;
@@ -48,14 +49,17 @@ class ClaudeCodeLLMClient extends LLMClient {
       filePath: options.logFilePath,
     });
 
-    this.model = new ClaudeCodeLanguageModel({
-      systemPromptEnhancement: options.systemPromptEnhancement,
-      claudeArgs: options.claudeArgs,
-      cwd: options.cwd,
-      timeout: options.timeout ?? 60000,
-      verbose: options.verbose ?? false,
-      logger: this.logger,
-    });
+    this.model = createLanguageModelProvider(
+      options.agentType ?? "claude",
+      {
+        systemPromptEnhancement: options.systemPromptEnhancement,
+        agentArgs: options.agentArgs ?? options.claudeArgs,
+        cwd: options.cwd,
+        timeout: options.timeout ?? 60000,
+        verbose: options.verbose ?? false,
+        logger: this.logger,
+      }
+    );
 
     this.enableSelectorGeneralization = options.enableSelectorGeneralization !== false;
     this.selectorStore = new SelectorStore();

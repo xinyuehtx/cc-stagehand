@@ -140,4 +140,176 @@ describe("ClaudeCodeLLMClient", () => {
       })
     ).rejects.toThrow("claude -p exited with code 1");
   });
+
+  it("默认 agentType 为 claude（向后兼容）", async () => {
+    const mockSpawn = vi.mocked(spawn);
+    const mockStdout = {
+      on: vi.fn((event, cb) => {
+        if (event === "data") {
+          cb(JSON.stringify({
+            result: "Success",
+            structured_output: { elementId: "0-1", method: "click", arguments: [] },
+            session_id: "test-session",
+            total_cost_usd: 0.001,
+            cost_usd: {},
+          }));
+        }
+      }),
+    };
+
+    mockSpawn.mockReturnValue({
+      stdout: mockStdout,
+      stderr: { on: vi.fn() },
+      on: vi.fn((event, cb) => {
+        if (event === "close") cb(0);
+      }),
+    } as any);
+
+    // client 创建时未传 agentType，应默认使用 claude
+    await client.createChatCompletion({
+      options: {
+        messages: [{ role: "user", content: "点击登录按钮" }],
+      },
+      logger: () => {},
+    });
+
+    expect(mockSpawn).toHaveBeenCalledWith(
+      "claude",
+      expect.arrayContaining(["-p"]),
+      expect.any(Object)
+    );
+  });
+
+  it("指定 agentType 为 opencode 时使用 opencode provider", async () => {
+    const mockSpawn = vi.mocked(spawn);
+    const openCodeClient = createClaudeCodeLLMClient({
+      agentType: "opencode",
+      cwd: "./e2e-skills",
+      logTarget: "stdout",
+    });
+
+    const mockStdout = {
+      on: vi.fn((event, cb) => {
+        if (event === "data") {
+          cb(JSON.stringify({
+            result: "Success",
+            structured_output: { elementId: "0-1", method: "click", arguments: [] },
+            session_id: "test-session",
+            total_cost_usd: 0.001,
+            cost_usd: {},
+          }));
+        }
+      }),
+    };
+
+    mockSpawn.mockReturnValue({
+      stdout: mockStdout,
+      stderr: { on: vi.fn() },
+      on: vi.fn((event, cb) => {
+        if (event === "close") cb(0);
+      }),
+    } as any);
+
+    await openCodeClient.createChatCompletion({
+      options: {
+        messages: [{ role: "user", content: "点击登录按钮" }],
+      },
+      logger: () => {},
+    });
+
+    // spawn 应该调用 opencode 而非 claude
+    expect(mockSpawn).toHaveBeenCalledWith(
+      expect.stringContaining("opencode"),
+      expect.arrayContaining(["-p"]),
+      expect.any(Object)
+    );
+  });
+
+  it("指定 agentType 为 qodercli 时使用 qodercli provider", async () => {
+    const mockSpawn = vi.mocked(spawn);
+    const qodercliClient = createClaudeCodeLLMClient({
+      agentType: "qodercli",
+      cwd: "./e2e-skills",
+      logTarget: "stdout",
+    });
+
+    const mockStdout = {
+      on: vi.fn((event, cb) => {
+        if (event === "data") {
+          cb(JSON.stringify({
+            result: "Success",
+            structured_output: { elementId: "0-1", method: "click", arguments: [] },
+            session_id: "test-session",
+            total_cost_usd: 0.001,
+            cost_usd: {},
+          }));
+        }
+      }),
+    };
+
+    mockSpawn.mockReturnValue({
+      stdout: mockStdout,
+      stderr: { on: vi.fn() },
+      on: vi.fn((event, cb) => {
+        if (event === "close") cb(0);
+      }),
+    } as any);
+
+    await qodercliClient.createChatCompletion({
+      options: {
+        messages: [{ role: "user", content: "点击登录按钮" }],
+      },
+      logger: () => {},
+    });
+
+    // spawn 应该调用 qodercli 而非 claude
+    expect(mockSpawn).toHaveBeenCalledWith(
+      expect.stringContaining("qodercli"),
+      expect.arrayContaining(["-p"]),
+      expect.any(Object)
+    );
+  });
+
+  it("agentArgs 优先于 claudeArgs", async () => {
+    const mockSpawn = vi.mocked(spawn);
+    const clientWithArgs = createClaudeCodeLLMClient({
+      claudeArgs: ["--model", "old"],
+      agentArgs: ["--model", "new"],
+      logTarget: "stdout",
+    });
+
+    const mockStdout = {
+      on: vi.fn((event, cb) => {
+        if (event === "data") {
+          cb(JSON.stringify({
+            result: "Success",
+            structured_output: { elementId: "0-1", method: "click", arguments: [] },
+            session_id: "test-session",
+            total_cost_usd: 0.001,
+            cost_usd: {},
+          }));
+        }
+      }),
+    };
+
+    mockSpawn.mockReturnValue({
+      stdout: mockStdout,
+      stderr: { on: vi.fn() },
+      on: vi.fn((event, cb) => {
+        if (event === "close") cb(0);
+      }),
+    } as any);
+
+    await clientWithArgs.createChatCompletion({
+      options: {
+        messages: [{ role: "user", content: "点击登录按钮" }],
+      },
+      logger: () => {},
+    });
+
+    // agentArgs 优先，所以 spawn 参数中应包含 "new" 而非 "old"
+    const spawnArgs = mockSpawn.mock.calls[0][1] as string[];
+    expect(spawnArgs).toContain("new");
+    expect(spawnArgs).not.toContain("old");
+  });
 });

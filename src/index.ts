@@ -7,6 +7,9 @@
 
 // 主要 API
 export { createClaudeCodeLLMClient } from "./llm-client.js";
+
+// 通用创建函数（别名）
+export { createClaudeCodeLLMClient as createLLMClient } from "./llm-client.js";
 export { SelfHealTracker } from "./self-heal.js";
 export { E2EReport } from "./report.js";
 export { SelectorStore } from "./selector-store.js";
@@ -28,3 +31,6 @@ export type {
 } from "./types.js";
 
 export type { CacheUpdateOptions, CacheUpdateResult } from "./cache-updater.js";
+
+// Provider 相关类型
+export type { AgentType, LanguageModelProvider } from "./providers/types.js";

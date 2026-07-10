@@ -1,30 +1,31 @@
+/**
+ * Qodercli Language Model Provider
+ * 封装 qodercli CLI 调用，实现 LanguageModelProvider 接口
+ */
 import { spawn, execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve as resolvePath } from "node:path";
-import type { Logger } from "./logger.js";
-import type { ClaudeCodeResponse } from "./types.js";
-import type { LanguageModelProvider, LanguageModelProviderOptions, AgentType } from "./providers/types.js";
+import type { ClaudeCodeResponse } from "../types.js";
+import type { LanguageModelProvider, LanguageModelProviderOptions, AgentType } from "./types.js";
 
 /**
- * Resolve the absolute path of the `claude` CLI binary.
+ * Resolve the absolute path of the `qodercli` CLI binary.
  * Falls back to the bare name if resolution fails.
  */
-function resolveClaudeBin(): string {
+function resolveQodercliBin(): string {
   try {
-    const result = execSync("command -v claude", { encoding: "utf8" }).trim();
+    const result = execSync("command -v qodercli", { encoding: "utf8" }).trim();
     if (result) return result;
   } catch {
     // ignore
   }
-  return "claude";
+  return "qodercli";
 }
 
-export class ClaudeCodeLanguageModel implements LanguageModelProvider {
-  readonly type: AgentType = "claude";
+export class QodercliLanguageModel implements LanguageModelProvider {
+  readonly type: AgentType = "qodercli";
 
-  constructor(
-    private options: LanguageModelProviderOptions
-  ) {}
+  constructor(private options: LanguageModelProviderOptions) {}
 
   async generate(
     systemPrompt: string | undefined,
@@ -33,27 +34,29 @@ export class ClaudeCodeLanguageModel implements LanguageModelProvider {
   ): Promise<ClaudeCodeResponse> {
     const startTime = Date.now();
 
-    // 1. 构建 claude -p 命令
     const commandArgs = this.buildCommandArgs(systemPrompt, userPrompt, jsonSchema);
 
-    this.options.logger.debug("Claude Code 命令", {
-      command: `claude ${commandArgs.join(" ")}`,
+    this.options.logger.debug("Qodercli 命令", {
+      command: `qodercli ${commandArgs.join(" ")}`,
     });
 
-    // 2. 执行 claude -p
-    const claudeResponse = await this.executeClaudeCommand(commandArgs);
+    const response = await this.executeCommand(commandArgs);
 
     const durationMs = Date.now() - startTime;
 
-    this.options.logger.info("Claude Code 调用完成", {
+    this.options.logger.info("Qodercli 调用完成", {
       durationMs,
-      costUsd: claudeResponse.total_cost_usd,
-      sessionId: claudeResponse.session_id,
+      costUsd: response.total_cost_usd,
+      sessionId: response.session_id,
     });
 
-    return claudeResponse;
+    return response;
   }
 
+  /**
+   * 构建 qodercli CLI 命令参数
+   * TODO: 需要确认 qodercli CLI 的实际参数格式，当前假设与 claude CLI 类似
+   */
   buildCommandArgs(
     systemPrompt: string | undefined,
     userPrompt: string,
@@ -61,7 +64,7 @@ export class ClaudeCodeLanguageModel implements LanguageModelProvider {
   ): string[] {
     const args = ["-p", userPrompt];
 
-    // 追加 system prompt（Stagehand 的 + 增强 + JSON Schema 指令）
+    // 追加 system prompt
     let fullSystemPrompt = "";
 
     if (systemPrompt || this.options.systemPromptEnhancement) {
@@ -84,10 +87,12 @@ export class ClaudeCodeLanguageModel implements LanguageModelProvider {
     }
 
     if (fullSystemPrompt) {
+      // TODO: 确认 qodercli 的 system prompt 参数名
       args.push("--append-system-prompt", fullSystemPrompt);
     }
 
     // 输出格式
+    // TODO: 确认 qodercli 的输出格式参数
     args.push("--output-format", "json");
 
     // 额外参数
@@ -99,21 +104,18 @@ export class ClaudeCodeLanguageModel implements LanguageModelProvider {
   }
 
   /**
-   * 解析 Claude Code 的输出
-   * --output-format json 输出的是 JSON 数组，包含多个事件
-   * 最后一个 type="result" 的事件包含最终结果
+   * 解析 qodercli 的输出
+   * TODO: 确认 qodercli 的输出格式，当前假设与 claude CLI 相同
    */
-  private parseClaudeOutput(stdout: string): ClaudeCodeResponse {
+  private parseOutput(stdout: string): ClaudeCodeResponse {
     const events = JSON.parse(stdout);
 
-    // 如果是数组，找到最后的 result 事件
     if (Array.isArray(events)) {
       const resultEvent = [...events].reverse().find((e: any) => e.type === "result");
 
       if (resultEvent) {
         const resultText = resultEvent.result ?? "";
 
-        // 尝试解析结构化输出（当使用 --json-schema 时）
         let structuredOutput: any;
         try {
           structuredOutput = JSON.parse(resultText);
@@ -121,7 +123,6 @@ export class ClaudeCodeLanguageModel implements LanguageModelProvider {
             keys: Object.keys(structuredOutput),
           });
         } catch {
-          // 不是有效的 JSON，当作普通文本
           this.options.logger.debug("结果不是 JSON 格式，作为普通文本处理");
         }
 
@@ -134,7 +135,6 @@ export class ClaudeCodeLanguageModel implements LanguageModelProvider {
         };
       }
 
-      // 如果没有 result 事件，尝试从 assistant 消息中提取
       const assistantEvent = [...events]
         .reverse()
         .find((e: any) => e.type === "assistant" && e.message?.content);
@@ -148,7 +148,6 @@ export class ClaudeCodeLanguageModel implements LanguageModelProvider {
               .join("\n")
           : String(content);
 
-        // 尝试解析结构化输出
         let structuredOutput: any;
         try {
           structuredOutput = JSON.parse(text);
@@ -165,20 +164,16 @@ export class ClaudeCodeLanguageModel implements LanguageModelProvider {
         };
       }
 
-      throw new Error("No result or assistant event found in Claude Code output");
+      throw new Error("No result or assistant event found in qodercli output");
     }
 
-    // 如果是单个对象（兼容旧格式）
     return events as ClaudeCodeResponse;
   }
 
-  private async executeClaudeCommand(
-    args: string[]
-  ): Promise<ClaudeCodeResponse> {
+  private async executeCommand(args: string[]): Promise<ClaudeCodeResponse> {
     return new Promise((resolve, reject) => {
-      const claudeBin = resolveClaudeBin();
+      const bin = resolveQodercliBin();
 
-      // Validate cwd exists if provided
       let validCwd = this.options.cwd;
       if (validCwd) {
         const absoluteCwd = resolvePath(validCwd);
@@ -191,13 +186,13 @@ export class ClaudeCodeLanguageModel implements LanguageModelProvider {
         }
       }
 
-      this.options.logger.debug("Spawning claude process", {
-        claudeBin,
+      this.options.logger.debug("Spawning qodercli process", {
+        bin,
         args: args.slice(0, 5),
         cwd: validCwd,
       });
 
-      const proc = spawn(claudeBin, args, {
+      const proc = spawn(bin, args, {
         timeout: this.options.timeout,
         cwd: validCwd,
         stdio: ["ignore", "pipe", "pipe"],
@@ -216,32 +211,32 @@ export class ClaudeCodeLanguageModel implements LanguageModelProvider {
 
       proc.on("close", (code) => {
         if (code !== 0) {
-          this.options.logger.error("Claude Code 执行失败", {
+          this.options.logger.error("Qodercli 执行失败", {
             exitCode: code,
             stderr: stderr.substring(0, 500),
             stdout: stdout.substring(0, 500),
           });
-          reject(new Error(`claude -p exited with code ${code}: ${stderr || stdout}`));
+          reject(new Error(`qodercli -p exited with code ${code}: ${stderr || stdout}`));
           return;
         }
 
         try {
-          const response = this.parseClaudeOutput(stdout);
+          const response = this.parseOutput(stdout);
           resolve(response);
         } catch (error) {
-          this.options.logger.error("Claude Code 响应解析失败", {
+          this.options.logger.error("Qodercli 响应解析失败", {
             stdout: stdout.substring(0, 500),
             error: String(error),
           });
-          reject(new Error(`Failed to parse Claude Code response: ${error}`));
+          reject(new Error(`Failed to parse qodercli response: ${error}`));
         }
       });
 
       proc.on("error", (error) => {
-        this.options.logger.error("Claude Code 启动失败", {
+        this.options.logger.error("Qodercli 启动失败", {
           error: String(error),
         });
-        reject(new Error(`Failed to spawn claude process: ${error}`));
+        reject(new Error(`Failed to spawn qodercli process: ${error}`));
       });
     });
   }

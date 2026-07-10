@@ -7,7 +7,7 @@ describe("ClaudeCodeLanguageModel", () => {
     const logger = new Logger({ target: "stdout" });
     const model = new ClaudeCodeLanguageModel({
       systemPromptEnhancement: "优先使用 data-testid",
-      claudeArgs: ["--model", "sonnet"],
+      agentArgs: ["--model", "sonnet"],
       logger,
     });
 

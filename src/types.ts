@@ -7,8 +7,17 @@ export interface ClaudeCodeLLMClientOptions {
   /** 额外的 system prompt 增强 */
   systemPromptEnhancement?: string;
 
-  /** claude -p 命令的额外参数 */
+  /**
+   * claude -p 命令的额外参数
+   * @deprecated 请使用 agentArgs 代替
+   */
   claudeArgs?: string[];
+
+  /** Agent 类型选择（默认 "claude"） */
+  agentType?: "claude" | "opencode" | "qodercli";
+
+  /** Agent CLI 的额外参数（通用，优先于 claudeArgs） */
+  agentArgs?: string[];
 
   /** Claude Code 的工作目录（用于发现 CLAUDE.md skill 文件） */
   cwd?: string;
