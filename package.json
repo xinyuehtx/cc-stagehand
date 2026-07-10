@@ -1,6 +1,6 @@
 {
   "name": "@tengxiaohtx/stagehand-cc-agent",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Claude Code as LLM execution engine for Stagehand E2E testing",
   "type": "module",
   "main": "./dist/index.js",
