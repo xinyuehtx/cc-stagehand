@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "instruction": "点击第一个博客卡片的 Read more 按钮",
+  "url": "https://developer.mozilla.org/en-US/blog/",
+  "variableKeys": [],
+  "actions": [
+    {
+      "selector": "xpath=/html[1]/body[1]/div[2]/div[1]/div[1]/section[1]/article[1]/footer[1]/a[1]",
+      "description": "Read more link in the first blog card (Introducing the MDN MCP server)",
+      "method": "click",
+      "arguments": []
+    }
+  ],
+  "actionDescription": "Read more link in the first blog card (Introducing the MDN MCP server)",
+  "message": "Action [click] performed successfully on selector: xpath=/html[1]/body[1]/div[2]/div[1]/div[1]/section[1]/article[1]/footer[1]/a[1]"
+}

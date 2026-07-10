@@ -144,4 +144,52 @@ describe("QodercliLanguageModel", () => {
       model.generate(undefined, "点击登录按钮")
     ).rejects.toThrow("qodercli -p exited with code 1");
   });
+
+  it("应该从混合输出中提取 JSON（qodercli 带额外推理文本）", async () => {
+    const mockSpawn = vi.mocked(spawn);
+    const jsonObj = {
+      action: { elementId: "0-5", method: "click", arguments: [], cssSelector: "article:first-of-type footer a" },
+      twoStep: false,
+    };
+    const mixedOutput = JSON.stringify(jsonObj) + "\n\nWait, I need to think about this more carefully...\nLet me analyze the accessibility tree.";
+
+    mockSpawn.mockReturnValue({
+      stdout: {
+        on: vi.fn((event, cb) => {
+          if (event === "data") cb(mixedOutput);
+        }),
+      },
+      stderr: { on: vi.fn() },
+      on: vi.fn((event, cb) => {
+        if (event === "close") cb(0);
+      }),
+    } as any);
+
+    const result = await model.generate(undefined, "点击 Read more 按钮");
+
+    expect(result.structured_output).toEqual(jsonObj);
+    expect(result.structured_output.action.cssSelector).toBe("article:first-of-type footer a");
+  });
+
+  it("纯文本输出时应返回 structured_output 为 undefined", async () => {
+    const mockSpawn = vi.mocked(spawn);
+    const plainText = "I cannot find any matching element on the page.";
+
+    mockSpawn.mockReturnValue({
+      stdout: {
+        on: vi.fn((event, cb) => {
+          if (event === "data") cb(plainText);
+        }),
+      },
+      stderr: { on: vi.fn() },
+      on: vi.fn((event, cb) => {
+        if (event === "close") cb(0);
+      }),
+    } as any);
+
+    const result = await model.generate(undefined, "点击不存在的按钮");
+
+    expect(result.structured_output).toBeUndefined();
+    expect(result.result).toBe(plainText);
+  });
 });

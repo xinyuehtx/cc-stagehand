@@ -93,7 +93,7 @@ class ClaudeCodeLLMClient extends LLMClient {
     let systemPrompt = systemMessage
       ? this.extractText(systemMessage.content)
       : undefined;
-    const userPrompt = this.extractText(userMessage.content);
+    let userPrompt = this.extractText(userMessage.content);
 
     // 提取 JSON Schema（如果有 response_model）
     let jsonSchema: object | undefined;
@@ -111,8 +111,10 @@ class ClaudeCodeLLMClient extends LLMClient {
     if (schemaName === "act" && this.enableSelectorGeneralization) {
       jsonSchema = this.injectCssSelectorField(jsonSchema!);
       systemPrompt = this.appendCssSelectorInstruction(systemPrompt);
-      // 从 user prompt 中提取 instruction 以便后续匹配
+      // 从 user prompt 中提取 instruction 以便后续匹配（必须在追加提醒之前调用）
       this.lastActInstruction = this.extractActInstruction(userPrompt);
+      // 在 userPrompt 末尾追加 cssSelector 要求，提高 LLM 遵从率
+      userPrompt = this.appendCssSelectorUserPrompt(userPrompt);
     }
 
     // 调用 Claude Code，传递 JSON Schema
@@ -323,6 +325,20 @@ class ClaudeCodeLLMClient extends LLMClient {
         description:
           "A stable, generalized CSS selector for the target element. Use semantic HTML tags (article, section, footer, nav, header), :first-of-type/:nth-of-type() for position. Avoid absolute paths or div-based nesting. Example: 'article:first-of-type footer a'",
       };
+
+      // 将 cssSelector 加入 required 数组，确保 LLM 必须返回该字段
+      const objectVariant = actionSchema.anyOf
+        ? actionSchema.anyOf.find(
+            (v: any) => v.type === "object" || v.properties
+          )
+        : actionSchema;
+      if (objectVariant) {
+        if (Array.isArray(objectVariant.required)) {
+          objectVariant.required.push("cssSelector");
+        } else {
+          objectVariant.required = ["cssSelector"];
+        }
+      }
     }
 
     return clone;
@@ -333,6 +349,15 @@ class ClaudeCodeLLMClient extends LLMClient {
    */
   private appendCssSelectorInstruction(systemPrompt: string | undefined): string {
     return (systemPrompt ?? "") + CSS_SELECTOR_INSTRUCTION;
+  }
+
+  /**
+   * 在 user prompt 末尾追加 cssSelector 生成要求
+   * 双重强调（system + user prompt）以提高 LLM 遵从率
+   */
+  private appendCssSelectorUserPrompt(userPrompt: string): string {
+    const reminder = `\n\nREMINDER: You MUST include the "cssSelector" field in your JSON response. Generate a stable, semantic CSS selector for the target element (e.g., "article:first-of-type footer a"). This field is REQUIRED and must not be omitted.`;
+    return userPrompt + reminder;
   }
 
   /**

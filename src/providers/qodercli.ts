@@ -104,70 +104,139 @@ export class QodercliLanguageModel implements LanguageModelProvider {
   }
 
   /**
-   * 解析 qodercli 的输出
-   * TODO: 确认 qodercli 的输出格式，当前假设与 claude CLI 相同
+   * 解析事件数组格式的输出（类似 claude CLI 事件流）
    */
-  private parseOutput(stdout: string): ClaudeCodeResponse {
-    const events = JSON.parse(stdout);
+  private parseEventsArray(events: any[]): ClaudeCodeResponse {
+    const resultEvent = [...events].reverse().find((e: any) => e.type === "result");
 
-    if (Array.isArray(events)) {
-      const resultEvent = [...events].reverse().find((e: any) => e.type === "result");
+    if (resultEvent) {
+      const resultText = resultEvent.result ?? "";
 
-      if (resultEvent) {
-        const resultText = resultEvent.result ?? "";
-
-        let structuredOutput: any;
-        try {
-          structuredOutput = JSON.parse(resultText);
-          this.options.logger.debug("成功解析结构化输出", {
-            keys: Object.keys(structuredOutput),
-          });
-        } catch {
-          this.options.logger.debug("结果不是 JSON 格式，作为普通文本处理");
-        }
-
-        return {
-          result: resultText,
-          structured_output: structuredOutput,
-          session_id: resultEvent.session_id ?? "",
-          total_cost_usd: resultEvent.total_cost_usd ?? 0,
-          cost_usd: resultEvent.usage ?? {},
-        };
+      let structuredOutput: any;
+      try {
+        structuredOutput = JSON.parse(resultText);
+        this.options.logger.debug("成功解析结构化输出", {
+          keys: Object.keys(structuredOutput),
+        });
+      } catch {
+        this.options.logger.debug("结果不是 JSON 格式，作为普通文本处理");
       }
 
-      const assistantEvent = [...events]
-        .reverse()
-        .find((e: any) => e.type === "assistant" && e.message?.content);
+      return {
+        result: resultText,
+        structured_output: structuredOutput,
+        session_id: resultEvent.session_id ?? "",
+        total_cost_usd: resultEvent.total_cost_usd ?? 0,
+        cost_usd: resultEvent.usage ?? {},
+      };
+    }
 
-      if (assistantEvent) {
-        const content = assistantEvent.message.content;
-        const text = Array.isArray(content)
-          ? content
-              .filter((c: any) => c.type === "text")
-              .map((c: any) => c.text)
-              .join("\n")
-          : String(content);
+    const assistantEvent = [...events]
+      .reverse()
+      .find((e: any) => e.type === "assistant" && e.message?.content);
 
-        let structuredOutput: any;
-        try {
-          structuredOutput = JSON.parse(text);
-        } catch {
-          // 忽略
+    if (assistantEvent) {
+      const content = assistantEvent.message.content;
+      const text = Array.isArray(content)
+        ? content
+            .filter((c: any) => c.type === "text")
+            .map((c: any) => c.text)
+            .join("\n")
+        : String(content);
+
+      let structuredOutput: any;
+      try {
+        structuredOutput = JSON.parse(text);
+      } catch {
+        // 忽略
+      }
+
+      return {
+        result: text,
+        structured_output: structuredOutput,
+        session_id: assistantEvent.session_id ?? "",
+        total_cost_usd: 0,
+        cost_usd: {},
+      };
+    }
+
+    throw new Error("No result or assistant event found in qodercli output");
+  }
+
+  /**
+   * 解析 qodercli 的输出
+   * 支持纯 JSON、事件数组、以及 JSON + 额外推理文本的混合输出
+   */
+  private parseOutput(stdout: string): ClaudeCodeResponse {
+    const cleanedText = stdout.trim();
+
+    // 1. 先尝试直接解析（纯 JSON 输出）
+    try {
+      const events = JSON.parse(cleanedText);
+      // 如果是数组格式（类似 claude 的事件流输出）
+      if (Array.isArray(events)) {
+        return this.parseEventsArray(events);
+      }
+      // 如果是单个对象（直接的 ClaudeCodeResponse 格式）
+      return events as ClaudeCodeResponse;
+    } catch {
+      // JSON.parse 失败，尝试从混合输出中提取 JSON
+    }
+
+    // 2. 尝试提取 JSON 数组（事件流格式）
+    const arrayMatch = cleanedText.match(/\[[\s\S]*\]/);
+    if (arrayMatch) {
+      try {
+        const events = JSON.parse(arrayMatch[0]);
+        if (Array.isArray(events)) {
+          return this.parseEventsArray(events);
+        }
+      } catch {
+        // 继续尝试
+      }
+    }
+
+    // 3. 尝试提取 JSON 对象
+    const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        const parsed = JSON.parse(jsonMatch[0]);
+        this.options.logger.debug("从混合输出中提取到 JSON 对象", {
+          keys: Object.keys(parsed),
+        });
+
+        // 如果解析出的是直接的响应对象（有 result 或 structured_output 字段）
+        if ('result' in parsed || 'structured_output' in parsed) {
+          return parsed as ClaudeCodeResponse;
         }
 
+        // 否则将其作为 structured_output
         return {
-          result: text,
-          structured_output: structuredOutput,
-          session_id: assistantEvent.session_id ?? "",
+          result: stdout,
+          structured_output: parsed,
+          session_id: "",
           total_cost_usd: 0,
           cost_usd: {},
         };
+      } catch {
+        // JSON 提取也失败
+        this.options.logger.warn("无法从 qodercli 输出中提取有效 JSON", {
+          preview: cleanedText.substring(0, 300),
+        });
       }
-
-      throw new Error("No result or assistant event found in qodercli output");
     }
 
-    return events as ClaudeCodeResponse;
+    // 4. 最后手段：返回纯文本结果
+    this.options.logger.warn("qodercli 输出不包含有效 JSON，作为纯文本处理", {
+      preview: cleanedText.substring(0, 200),
+    });
+    return {
+      result: stdout,
+      structured_output: undefined,
+      session_id: "",
+      total_cost_usd: 0,
+      cost_usd: {},
+    };
   }
 
   private async executeCommand(args: string[]): Promise<ClaudeCodeResponse> {
