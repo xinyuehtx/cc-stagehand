@@ -352,12 +352,12 @@ class ClaudeCodeLLMClient extends LLMClient {
   }
 
   /**
-   * 在 user prompt 末尾追加 cssSelector 生成要求
+   * 在 user prompt 开头前置 cssSelector 生成要求
    * 双重强调（system + user prompt）以提高 LLM 遵从率
    */
   private appendCssSelectorUserPrompt(userPrompt: string): string {
-    const reminder = `\n\nREMINDER: You MUST include the "cssSelector" field in your JSON response. Generate a stable, semantic CSS selector for the target element (e.g., "article:first-of-type footer a"). This field is REQUIRED and must not be omitted.`;
-    return userPrompt + reminder;
+    const reminder = `CRITICAL REQUIREMENT: Your JSON response MUST include the "cssSelector" field in the action object. Generate a stable, semantic CSS selector (e.g., "article:first-of-type footer a"). This is MANDATORY — responses without cssSelector will be rejected.\n\n`;
+    return reminder + userPrompt;
   }
 
   /**
@@ -391,7 +391,30 @@ class ClaudeCodeLLMClient extends LLMClient {
    * 从 LLM 响应中捕获 cssSelector 并存入 SelectorStore
    */
   private captureCssSelector(result: ClaudeCodeResponse): void {
-    const output = result.structured_output;
+    let output = result.structured_output;
+
+    // 如果 structured_output 不可用，尝试从 result.result 文本中解析
+    if (!output?.action?.cssSelector && result.result) {
+      try {
+        const text = result.result
+          .replace(/```json\n?/g, '')
+          .replace(/```\n?/g, '')
+          .trim();
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (parsed?.action?.cssSelector) {
+            output = parsed;
+            this.logger.debug("从 result 文本中解析到 cssSelector", {
+              keys: Object.keys(parsed),
+            });
+          }
+        }
+      } catch {
+        // 解析失败，忽略
+      }
+    }
+
     if (!output?.action?.cssSelector) return;
 
     const cssSelector = output.action.cssSelector;

@@ -164,6 +164,50 @@ export class OpencodeLanguageModel implements LanguageModelProvider {
   }
 
   /**
+   * 从混合文本中提取第一个完整的 JSON 对象或数组
+   * 使用括号计数法，正确处理字符串内的引号和括号
+   */
+  private extractFirstJson(text: string, openChar: '{' | '['): string | null {
+    const closeChar = openChar === '{' ? '}' : ']';
+    const start = text.indexOf(openChar);
+    if (start === -1) return null;
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = start; i < text.length; i++) {
+      const ch = text[i];
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (ch === '\\' && inString) {
+        escaped = true;
+        continue;
+      }
+
+      if (ch === '"') {
+        inString = !inString;
+        continue;
+      }
+
+      if (inString) continue;
+
+      if (ch === openChar) depth++;
+      else if (ch === closeChar) {
+        depth--;
+        if (depth === 0) {
+          return text.substring(start, i + 1);
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
    * 解析 opencode 的输出
    * 支持纯 JSON、事件数组、以及 JSON + 额外推理文本的混合输出
    */
@@ -184,10 +228,10 @@ export class OpencodeLanguageModel implements LanguageModelProvider {
     }
 
     // 2. 尝试提取 JSON 数组（事件流格式）
-    const arrayMatch = cleanedText.match(/\[[\s\S]*\]/);
-    if (arrayMatch) {
+    const arrayStr = this.extractFirstJson(cleanedText, '[');
+    if (arrayStr) {
       try {
-        const events = JSON.parse(arrayMatch[0]);
+        const events = JSON.parse(arrayStr);
         if (Array.isArray(events)) {
           return this.parseEventsArray(events);
         }
@@ -197,10 +241,10 @@ export class OpencodeLanguageModel implements LanguageModelProvider {
     }
 
     // 3. 尝试提取 JSON 对象
-    const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
+    const jsonStr = this.extractFirstJson(cleanedText, '{');
+    if (jsonStr) {
       try {
-        const parsed = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonStr);
         this.options.logger.debug("从混合输出中提取到 JSON 对象", {
           keys: Object.keys(parsed),
         });
