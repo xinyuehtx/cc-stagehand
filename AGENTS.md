@@ -16,7 +16,7 @@
   - Vitest（单元测试）
   - Playwright（E2E 测试，与 Stagehand 集成）
 - **构建：** tsc
-- **运行时：** Node.js >= 18
+- **运行时：** Node.js >= 20
 - **依赖：** `@browserbasehq/stagehand` (peer), `claude` CLI (系统依赖), `@playwright/test` (E2E)
 
 ## 常用命令

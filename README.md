@@ -42,7 +42,7 @@ npm install @tengxiaohtx/stagehand-cc-agent
 ```
 
 **Prerequisites:**
-- Node.js >= 18
+- Node.js >= 20
 - `claude` CLI installed and available in PATH
 - `@browserbasehq/stagehand` >= 3.6.0
 
