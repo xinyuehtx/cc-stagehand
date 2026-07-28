@@ -13,7 +13,8 @@ export { createClaudeCodeLLMClient as createLLMClient } from "./llm-client.js";
 export { SelfHealTracker } from "./self-heal.js";
 export { E2EReport } from "./report.js";
 export { SelectorStore } from "./selector-store.js";
-export { generalizeCacheSelectors } from "./cache-updater.js";
+export { generalizeCacheSelectors, processCacheAfterAll } from "./cache-updater.js";
+export { updateCacheManifest } from "./cache-manifest.js";
 
 // 类型定义
 export type {
@@ -28,6 +29,12 @@ export type {
   ChatMessage,
   ChatMessageContent,
   LLMResponse,
+  CacheManifest,
+  CacheManifestEntry,
+  UpdateCacheManifestOptions,
+  UpdateCacheManifestResult,
+  CacheProcessOptions,
+  CacheProcessResult,
 } from "./types.js";
 
 export type { CacheUpdateOptions, CacheUpdateResult } from "./cache-updater.js";

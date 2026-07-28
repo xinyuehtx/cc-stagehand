@@ -113,6 +113,10 @@ class ClaudeCodeLLMClient extends LLMClient {
       systemPrompt = this.appendCssSelectorInstruction(systemPrompt);
       // 从 user prompt 中提取 instruction 以便后续匹配（必须在追加提醒之前调用）
       this.lastActInstruction = this.extractActInstruction(userPrompt);
+      // 记录已执行的 instruction 到 usedInstructions
+      if (this.lastActInstruction) {
+        this.selectorStore.markUsed(this.lastActInstruction);
+      }
       // 在 userPrompt 末尾追加 cssSelector 要求，提高 LLM 遵从率
       userPrompt = this.appendCssSelectorUserPrompt(userPrompt);
     }

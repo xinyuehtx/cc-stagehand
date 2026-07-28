@@ -6,6 +6,7 @@
  */
 export class SelectorStore {
   private store: Map<string, string> = new Map();
+  private _usedInstructions: Set<string> = new Set();
 
   /** 存储 instruction 对应的 cssSelector */
   set(instruction: string, cssSelector: string): void {
@@ -32,8 +33,19 @@ export class SelectorStore {
     return this.store.size;
   }
 
+  /** 标记某 instruction 已被执行 */
+  markUsed(instruction: string): void {
+    this._usedInstructions.add(instruction);
+  }
+
+  /** 返回所有已执行的 instruction（只读） */
+  get usedInstructions(): ReadonlySet<string> {
+    return this._usedInstructions;
+  }
+
   /** 清空所有记录 */
   clear(): void {
     this.store.clear();
+    this._usedInstructions.clear();
   }
 }

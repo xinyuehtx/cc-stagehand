@@ -1,0 +1,14 @@
+{
+  "generalization": {
+    "updatedSelectors": 0,
+    "skippedSelectors": 0
+  },
+  "manifest": {
+    "manifestPath": "/Users/huangtengxiao/Documents/code/cc-stagehand/examples/mdn-blog/.stagehand-cache/manifest.json",
+    "totalEntries": 1,
+    "added": 1,
+    "refreshed": 0,
+    "orphaned": 0,
+    "expired": 0
+  }
+}

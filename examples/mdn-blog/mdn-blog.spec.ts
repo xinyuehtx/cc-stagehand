@@ -4,7 +4,7 @@ import { Stagehand } from "@browserbasehq/stagehand";
 import { z } from "zod";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { createClaudeCodeLLMClient, generalizeCacheSelectors } from "@tengxiaohtx/stagehand-cc-agent";
+import { createClaudeCodeLLMClient, processCacheAfterAll } from "@tengxiaohtx/stagehand-cc-agent";
 
 /* ---- 路径常量 ---- */
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -46,16 +46,21 @@ test.describe("MDN Blog E2E Tests", () => {
   });
 
   test.afterAll(async () => {
-    // 后处理：将缓存中的 xpath 替换为语义化 CSS 选择器
+    // 后处理：泛化缓存选择器 + 维护 manifest
     if (stagehand) {
-      const llmClient = stagehand.llmClient as unknown as { selectorStore: import("@tengxiaohtx/stagehand-cc-agent").SelectorStore };
-      const result = generalizeCacheSelectors({
-        cacheDir: CACHE_DIR,
-        selectorStore: llmClient.selectorStore,
-      });
-      console.log(
-        `缓存后处理完成: ${result.updatedSelectors} 个选择器已泛化, ${result.skippedSelectors} 个跳过`
-      );
+      const llmClient = stagehand.llmClient as any;
+      if (llmClient?.selectorStore) {
+        const result = processCacheAfterAll({
+          cacheDir: CACHE_DIR,
+          selectorStore: llmClient.selectorStore,
+          isFullRun: true,
+          ttlSeconds: 30 * 24 * 3600,
+        });
+        console.log(
+          `缓存后处理完成: ${result.generalization.updatedSelectors} 个选择器泛化, ` +
+          `Manifest: ${result.manifest.added} 新增, ${result.manifest.orphaned} 孤儿, ${result.manifest.expired} 过期`
+        );
+      }
     }
 
     // 关闭 Playwright 连接（不关闭浏览器）

@@ -4,6 +4,8 @@
 
 [English](./README.md) | [中文](./README.zh-CN.md)
 
+📖 **[文档站点 & Playwright 真实使用截图 →](https://xinyuehtx.github.io/cc-stagehand/)**
+
 ---
 
 ## 这是什么？
@@ -101,13 +103,17 @@ await stagehand.close();
 | 选项 | 类型 | 默认值 | 描述 |
 |------|------|--------|------|
 | `systemPromptEnhancement` | `string` | `""` | 追加到 Stagehand system prompt 的额外指令 |
-| `claudeArgs` | `string[]` | `[]` | 额外的 `claude -p` CLI 参数 |
-| `cwd` | `string` | — | Claude Code 的工作目录（用于发现 `CLAUDE.md` skill 文件） |
+| `agentType` | `"claude" \| "opencode" \| "qodercli"` | `"claude"` | 底层 Agent CLI 类型 |
+| `agentArgs` | `string[]` | `[]` | 所选 Agent CLI 的额外参数 |
+| `claudeArgs` | `string[]` | `[]` | **已废弃** — 请使用 `agentArgs` |
+| `cwd` | `string` | — | Agent 的工作目录（用于发现 `CLAUDE.md` skill 文件） |
 | `logLevel` | `"debug" \| "info" \| "warn" \| "error"` | `"info"` | 日志级别 |
 | `logTarget` | `"auto" \| "stdout" \| "file"` | `"auto"` | 日志目标（自动检测 CI/本地环境） |
 | `logFilePath` | `string` | `"./.stagehand-logs/llm-client.log"` | `logTarget="file"` 时的日志文件路径 |
 | `onSelfHeal` | `(event: SelfHealEvent) => void` | — | 自愈事件回调 |
-| `timeout` | `number` | `30000` | Claude Code 调用超时时间（毫秒） |
+| `enableSelectorGeneralization` | `boolean` | `true` | 在 `act()` 时注入/捕获泛化 `cssSelector`，用于稳定缓存 |
+| `timeout` | `number` | `60000` | Agent 调用超时时间（毫秒） |
+| `verbose` | `boolean` | `false` | 是否启用 verbose 输出 |
 
 ### `SelfHealTracker`
 
@@ -142,10 +148,8 @@ await report.writeToFile("./e2e-report.json");
 
 | 示例 | 描述 |
 |------|------|
-| [basic-test](examples/basic-test/) | 基础 E2E 测试，使用语义化操作 |
-| [self-heal](examples/self-heal/) | 选择器失效时的自愈演示 |
-| [mdn-blog](examples/mdn-blog/) | 真实网站 E2E 测试 — 从 MDN 博客页提取卡片数据并导航到文章详情 |
-| [preheat-selectors](examples/preheat-selectors/) | 批量预生成并缓存选择器 |
+| [mdn-blog](examples/mdn-blog/) | 真实网站 E2E 测试 — Stagehand 启动浏览器，Playwright 通过 CDP 接入；从 MDN 博客页提取卡片数据并导航到文章详情 |
+| [playwright-cdp](examples/playwright-cdp/) | Playwright 启动 Chrome（`chrome-launcher`），Playwright 与 Stagehand 通过 CDP 接入同一浏览器；使用 `qodercli` agent |
 
 ## CI 集成
 

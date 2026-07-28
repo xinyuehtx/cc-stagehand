@@ -4,6 +4,8 @@
 
 [English](./README.md) | [中文](./README.zh-CN.md)
 
+📖 **[Documentation site & live Playwright screenshots →](https://xinyuehtx.github.io/cc-stagehand/)**
+
 ---
 
 ## What is this?
@@ -101,13 +103,17 @@ Creates a custom `LLMClient` for Stagehand.
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `systemPromptEnhancement` | `string` | `""` | Extra instructions appended to Stagehand's system prompt |
-| `claudeArgs` | `string[]` | `[]` | Additional `claude -p` CLI arguments |
-| `cwd` | `string` | — | Working directory for Claude Code (used to discover `CLAUDE.md` skill files) |
+| `agentType` | `"claude" \| "opencode" \| "qodercli"` | `"claude"` | Which agent CLI backs the LLM client |
+| `agentArgs` | `string[]` | `[]` | Additional CLI arguments for the selected agent |
+| `claudeArgs` | `string[]` | `[]` | **Deprecated** — use `agentArgs` |
+| `cwd` | `string` | — | Working directory for the agent (used to discover `CLAUDE.md` skill files) |
 | `logLevel` | `"debug" \| "info" \| "warn" \| "error"` | `"info"` | Log verbosity |
 | `logTarget` | `"auto" \| "stdout" \| "file"` | `"auto"` | Log destination (auto-detects CI vs local) |
 | `logFilePath` | `string` | `"./.stagehand-logs/llm-client.log"` | Log file path when `logTarget="file"` |
 | `onSelfHeal` | `(event: SelfHealEvent) => void` | — | Callback for self-heal events |
-| `timeout` | `number` | `30000` | Claude Code invocation timeout (ms) |
+| `enableSelectorGeneralization` | `boolean` | `true` | Inject/capture a generalized `cssSelector` on `act()` for stable caching |
+| `timeout` | `number` | `60000` | Agent invocation timeout (ms) |
+| `verbose` | `boolean` | `false` | Enable verbose agent output |
 
 ### `SelfHealTracker`
 
@@ -142,10 +148,8 @@ See the [examples/](examples/) directory:
 
 | Example | Description |
 |---------|-------------|
-| [basic-test](examples/basic-test/) | Basic E2E test with semantic actions |
-| [self-heal](examples/self-heal/) | Self-healing when selectors break |
-| [mdn-blog](examples/mdn-blog/) | Real-website E2E test — extract blog card data from MDN and navigate to article details |
-| [preheat-selectors](examples/preheat-selectors/) | Pre-generate and cache selectors in bulk |
+| [mdn-blog](examples/mdn-blog/) | Real-website E2E test — Stagehand launches the browser, Playwright attaches over CDP; extracts blog-card data from MDN and navigates to article details |
+| [playwright-cdp](examples/playwright-cdp/) | Playwright launches Chrome (via `chrome-launcher`), then both Playwright and Stagehand attach to the same browser over CDP; uses the `qodercli` agent |
 
 ## CI Integration
 

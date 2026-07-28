@@ -1,7 +1,7 @@
 import { test, expect, chromium } from "@playwright/test";
 import type { Browser, Page } from "@playwright/test";
 import { Stagehand } from "@browserbasehq/stagehand";
-import { createLLMClient, generalizeCacheSelectors } from "@tengxiaohtx/stagehand-cc-agent";
+import { createLLMClient, processCacheAfterAll } from "@tengxiaohtx/stagehand-cc-agent";
 import { launch } from "chrome-launcher";
 import type { LaunchedChrome } from "chrome-launcher";
 import { z } from "zod";
@@ -78,16 +78,19 @@ test.describe("Playwright 启动 Chrome + Stagehand 连接 CDP (qodercli)", () =
   });
 
   test.afterAll(async () => {
-    // 后处理：泛化缓存中的选择器
+    // 后处理：泛化缓存选择器 + 维护 manifest
     if (stagehand) {
       const llmClient = stagehand.llmClient as any;
       if (llmClient?.selectorStore) {
-        const result = generalizeCacheSelectors({
+        const result = processCacheAfterAll({
           cacheDir: CACHE_DIR,
           selectorStore: llmClient.selectorStore,
+          isFullRun: true,
+          ttlSeconds: 30 * 24 * 3600,
         });
         console.log(
-          `缓存后处理完成: ${result.updatedSelectors} 个选择器已泛化, ${result.skippedSelectors} 个跳过`
+          `缓存后处理完成: ${result.generalization.updatedSelectors} 个选择器泛化, ` +
+          `Manifest: ${result.manifest.added} 新增, ${result.manifest.orphaned} 孤儿, ${result.manifest.expired} 过期`
         );
       }
     }

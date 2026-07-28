@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>stagehand-cc-agent — Claude Code as Stagehand's LLM engine</title>
+  <meta name="description" content="A custom Stagehand LLMClient powered by Claude Code: skill-guided, stable, generalizable selectors, cached for zero-cost CI replay. With real Playwright screenshots." />
+  <meta property="og:title" content="@tengxiaohtx/stagehand-cc-agent" />
+  <meta property="og:description" content="Claude Code as the LLM execution engine for Stagehand E2E testing — stable selectors, cached for zero-cost CI." />
+  <link rel="preconnect" href="https://img.shields.io" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%236366f1'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='15' font-weight='bold' fill='white' text-anchor='middle'%3ECC%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./assets/style.css" />
+</head>
+<body>
+  <!-- ===================== NAV ===================== -->
+  <nav class="nav">
+    <div class="wrap">
+      <a class="brand" href="#top">
+        <span class="logo">CC</span>
+        <span>stagehand-cc-agent</span>
+      </a>
+      <span class="spacer"></span>
+      <a class="navlink" href="#why"><span lang-en>Why</span><span lang-zh>为什么</span></a>
+      <a class="navlink" href="#how"><span lang-en>How it works</span><span lang-zh>工作原理</span></a>
+      <a class="navlink" href="#demo"><span lang-en>Live demo</span><span lang-zh>真实演示</span></a>
+      <a class="navlink" href="#start"><span lang-en>Quick start</span><span lang-zh>快速开始</span></a>
+      <a class="navlink" href="https://github.com/xinyuehtx/cc-stagehand" target="_blank" rel="noopener">GitHub</a>
+      <button class="lang-toggle" id="langToggle" aria-label="Switch language">中文</button>
+    </div>
+  </nav>
+
+  <!-- ===================== HERO ===================== -->
+  <header class="hero" id="top">
+    <div class="wrap">
+      <span class="pill">🤖 Claude Code × 🎭 Stagehand × Playwright</span>
+      <h1>
+        <span lang-en>Semantic E2E tests with <span class="grad">stable, self-healing</span> selectors</span>
+        <span lang-zh>用 <span class="grad">稳定、自愈</span> 的选择器写语义化 E2E 测试</span>
+      </h1>
+      <p class="sub">
+        <span lang-en>A custom Stagehand <code>LLMClient</code> that uses <b>Claude Code</b> to turn plain-language actions into stable, generalizable CSS selectors — cached to Git for zero-cost, deterministic CI replay.</span>
+        <span lang-zh>一个由 <b>Claude Code</b> 驱动的 Stagehand 自定义 <code>LLMClient</code>：把自然语言操作转成稳定、可泛化的 CSS 选择器，并缓存进 Git，实现零成本、确定性的 CI 回放。</span>
+      </p>
+      <div class="cta">
+        <a class="btn btn-primary" href="#start"><span lang-en>Get started</span><span lang-zh>快速开始</span> →</a>
+        <a class="btn btn-ghost" href="#demo"><span lang-en>See real screenshots</span><span lang-zh>看真实截图</span></a>
+        <a class="btn btn-ghost" href="https://www.npmjs.com/package/@tengxiaohtx/stagehand-cc-agent" target="_blank" rel="noopener">npm</a>
+      </div>
+      <div class="hero-badges">
+        <img src="https://img.shields.io/npm/v/@tengxiaohtx/stagehand-cc-agent?color=6366f1&label=npm" alt="npm version" />
+        <img src="https://img.shields.io/badge/node-%3E%3D18-3c873a" alt="node >= 18" />
+        <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license" />
+        <img src="https://img.shields.io/badge/tests-59%20passing-059669" alt="59 tests passing" />
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================== WHY ===================== -->
+  <section class="block" id="why">
+    <div class="wrap">
+      <span class="eyebrow"><span lang-en>The problem</span><span lang-zh>问题</span></span>
+      <h2 class="title"><span lang-en>Default LLM selectors are fragile</span><span lang-zh>默认 LLM 生成的选择器很脆弱</span></h2>
+      <p class="lead">
+        <span lang-en>Stagehand's default model often emits XPath or hashed CSS classes that break on every frontend refactor. This package fixes selector quality, cost, and resilience at once.</span>
+        <span lang-zh>Stagehand 的默认模型常生成 XPath 或带 hash 的 CSS class，前端每次重构都会大面积失效。本包一次性解决选择器的质量、成本与韧性。</span>
+      </p>
+
+      <div class="grid cols-3">
+        <div class="card">
+          <div class="ico">🎯</div>
+          <h3><span lang-en>Better selectors</span><span lang-zh>更优的选择器</span></h3>
+          <p><span lang-en>Claude Code + your skill docs prefer <code>data-testid</code>, <code>aria-label</code> and semantic tags that survive refactors.</span><span lang-zh>Claude Code + 你的 skill 文档，优先使用 <code>data-testid</code>、<code>aria-label</code> 与语义标签，扛得住重构。</span></p>
+        </div>
+        <div class="card">
+          <div class="ico">⚡</div>
+          <h3><span lang-en>Zero-cost CI</span><span lang-zh>CI 零成本</span></h3>
+          <p><span lang-en>Selectors are cached on first run and committed to Git. CI is pure deterministic CDP replay — 0 LLM calls, $0.</span><span lang-zh>选择器首次运行即缓存并提交到 Git。CI 为纯确定性 CDP 回放 —— 零 LLM 调用、零成本。</span></p>
+        </div>
+        <div class="card">
+          <div class="ico">🩹</div>
+          <h3><span lang-en>Self-healing</span><span lang-zh>自愈能力</span></h3>
+          <p><span lang-en>When a cached selector breaks, Claude Code regenerates it and can create a fix commit automatically.</span><span lang-zh>缓存选择器失效时，Claude Code 自动重新生成，并可自动创建修复 commit。</span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== HOW ===================== -->
+  <section class="block alt" id="how">
+    <div class="wrap">
+      <span class="eyebrow"><span lang-en>How it works</span><span lang-zh>工作原理</span></span>
+      <h2 class="title"><span lang-en>From plain language to a stable selector</span><span lang-zh>从自然语言到稳定选择器</span></h2>
+      <p class="lead">
+        <span lang-en>You write a semantic action. Claude Code, guided by your <code>e2e-skills/CLAUDE.md</code>, generates a generalized selector and caches it. The example below is the <b>real output</b> captured from the MDN demo run.</span>
+        <span lang-zh>你只写语义化操作。Claude Code 依据你的 <code>e2e-skills/CLAUDE.md</code> 生成泛化选择器并缓存。下面是 MDN 演示运行中<b>真实捕获</b>的输出。</span>
+      </p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="n"></div>
+          <div>
+            <h3><span lang-en>You write a semantic action</span><span lang-zh>你写语义化操作</span></h3>
+            <p><code>await stagehand.act("点击第一个博客卡片的 Read more 按钮", { page })</code></p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="n"></div>
+          <div>
+            <h3><span lang-en>Claude Code generates & generalizes a selector</span><span lang-zh>Claude Code 生成并泛化选择器</span></h3>
+            <p><span lang-en>The skill doc steers it away from XPath toward short, semantic CSS.</span><span lang-zh>skill 文档引导它避开 XPath，产出简短的语义化 CSS。</span></p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="n"></div>
+          <div>
+            <h3><span lang-en>The selector is cached + tracked in a manifest</span><span lang-zh>选择器被缓存并写入 manifest</span></h3>
+            <p><span lang-en>Next run hits the cache — deterministic CDP replay, no LLM.</span><span lang-zh>下次运行直接命中缓存 —— 确定性 CDP 回放，无需 LLM。</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="compare">
+        <div class="panel bad">
+          <div class="head">❌ <span lang-en>Default LLM: fragile XPath</span><span lang-zh>默认 LLM：脆弱的 XPath</span> <span class="tag bad">breaks on refactor</span></div>
+          <div class="body"><code>xpath=/html[1]/body[1]/div[2]/div[1]/div[1]/section[1]/article[1]/footer[1]/a[1]</code></div>
+        </div>
+        <div class="panel good">
+          <div class="head">✅ <span lang-en>This package: generalized CSS</span><span lang-zh>本包：泛化的 CSS</span> <span class="tag good">survives refactor</span></div>
+          <div class="body"><code>article:first-of-type footer a</code></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== DEMO ===================== -->
+  <section class="block" id="demo">
+    <div class="wrap">
+      <span class="eyebrow"><span lang-en>Live Playwright demo</span><span lang-zh>Playwright 真实演示</span></span>
+      <h2 class="title"><span lang-en>Real screenshots from a real run</span><span lang-zh>来自真实运行的截图</span></h2>
+      <p class="lead">
+        <span lang-en>These are unedited screenshots captured by <code>examples/mdn-blog/site-capture.spec.ts</code> driving the live <a href="https://developer.mozilla.org/en-US/blog/" target="_blank" rel="noopener">MDN Blog</a> with Stagehand + Claude Code + Playwright over CDP.</span>
+        <span lang-zh>以下为 <code>examples/mdn-blog/site-capture.spec.ts</code> 通过 CDP 驱动真实 <a href="https://developer.mozilla.org/en-US/blog/" target="_blank" rel="noopener">MDN 博客</a> 时，由 Stagehand + Claude Code + Playwright 截取的未经修饰的截图。</span>
+      </p>
+
+      <div class="shots">
+        <figure class="shot" style="margin:0">
+          <div class="frame">
+            <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+            <span class="url">https://developer.mozilla.org/en-US/blog/</span>
+          </div>
+          <img src="./assets/screenshots/01-blog-list.png" alt="MDN blog list page driven by the test, showing blog cards" />
+          <figcaption class="cap">
+            <span class="step-badge">Step 1</span>
+            <span lang-en><b>extract()</b> reads all blog-card titles from the a11y tree into a typed array.</span>
+            <span lang-zh><b>extract()</b> 从可访问性树中读出所有博客卡片标题，返回类型化数组。</span>
+          </figcaption>
+        </figure>
+
+        <figure class="shot" style="margin:0">
+          <div class="frame">
+            <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+            <span class="url">https://developer.mozilla.org/en-US/blog/.../</span>
+          </div>
+          <img src="./assets/screenshots/02-article-detail.png" alt="MDN article detail page after the semantic click navigated to the article" />
+          <figcaption class="cap">
+            <span class="step-badge">Step 2</span>
+            <span lang-en><b>act("click Read more")</b> used the cached selector to click and navigate to the article.</span>
+            <span lang-zh><b>act("点击 Read more")</b> 命中缓存选择器，完成点击并跳转到文章详情页。</span>
+          </figcaption>
+        </figure>
+      </div>
+
+      <p class="lead" style="margin-top:34px">
+        <span lang-en>The <code>extract()</code> above returned real, structured data:</span>
+        <span lang-zh>上面的 <code>extract()</code> 返回了真实的结构化数据：</span>
+      </p>
+      <div class="chips">
+        <span class="chip">Introducing the MDN MCP server</span>
+        <span class="chip">Under the hood of MDN's new frontend</span>
+        <span class="chip">Image formats: Codecs and compression tools</span>
+        <span class="chip">A beginner-friendly guide to view transitions in CSS</span>
+        <span class="chip">Launching MDN's new front end</span>
+        <span class="chip">Image formats: Pixel data …</span>
+      </div>
+
+      <p class="lead" style="margin-top:34px">
+        <span lang-en>…and the cached selector was recorded in <code>.stagehand-cache/manifest.json</code>:</span>
+        <span lang-zh>……而缓存的选择器被记录进 <code>.stagehand-cache/manifest.json</code>：</span>
+      </p>
+      <div class="codeblock"><pre><code>{
+  <span class="c-key">"instruction"</span>: <span class="c-str">"点击第一个博客卡片的 Read more 按钮"</span>,
+  <span class="c-key">"selector"</span>:    <span class="c-str">"article:first-of-type footer a"</span>,
+  <span class="c-key">"url"</span>:         <span class="c-str">"https://developer.mozilla.org/en-US/blog/"</span>,
+  <span class="c-key">"status"</span>:      <span class="c-str">"active"</span>,
+  <span class="c-key">"generalized"</span>: <span class="c-num">true</span>,
+  <span class="c-key">"ttlSeconds"</span>:  <span class="c-num">2592000</span>   <span class="c-com">// 30 days</span>
+}</code></pre></div>
+    </div>
+  </section>
+
+  <!-- ===================== QUICK START ===================== -->
+  <section class="block alt" id="start">
+    <div class="wrap">
+      <span class="eyebrow"><span lang-en>Quick start</span><span lang-zh>快速开始</span></span>
+      <h2 class="title"><span lang-en>Up and running in a minute</span><span lang-zh>一分钟跑起来</span></h2>
+      <p class="lead">
+        <span lang-en>Requires Node ≥ 18, the <code>claude</code> CLI in PATH, and <code>@browserbasehq/stagehand</code> ≥ 3.6.</span>
+        <span lang-zh>需要 Node ≥ 18、PATH 中可用的 <code>claude</code> CLI，以及 <code>@browserbasehq/stagehand</code> ≥ 3.6。</span>
+      </p>
+
+      <div class="codeblock"><pre><code><span class="c-com"># 1. install</span>
+npm install @tengxiaohtx/stagehand-cc-agent</code></pre></div>
+
+      <div class="codeblock"><pre><code><span class="c-com">// 2. use Claude Code as Stagehand's LLM engine</span>
+<span class="c-key">import</span> { Stagehand } <span class="c-key">from</span> <span class="c-str">"@browserbasehq/stagehand"</span>;
+<span class="c-key">import</span> { <span class="c-fn">createClaudeCodeLLMClient</span> } <span class="c-key">from</span> <span class="c-str">"@tengxiaohtx/stagehand-cc-agent"</span>;
+
+<span class="c-key">const</span> stagehand = <span class="c-key">new</span> <span class="c-fn">Stagehand</span>({
+  env: <span class="c-str">"LOCAL"</span>,
+  llmClient: <span class="c-fn">createClaudeCodeLLMClient</span>({
+    cwd: <span class="c-str">"./e2e-skills"</span>,        <span class="c-com">// where your CLAUDE.md skill lives</span>
+    systemPromptEnhancement: <span class="c-str">"Prefer data-testid, then aria-label, then semantic tags."</span>,
+  }),
+  cacheDir: <span class="c-str">"./.stagehand-cache"</span>,   <span class="c-com">// commit this to Git for zero-cost CI</span>
+});
+
+<span class="c-key">await</span> stagehand.<span class="c-fn">init</span>();
+<span class="c-key">const</span> page = stagehand.context.<span class="c-fn">pages</span>()[<span class="c-num">0</span>];
+<span class="c-key">await</span> page.<span class="c-fn">goto</span>(<span class="c-str">"https://app.example.com/login"</span>);
+
+<span class="c-com">// semantic actions — no selectors written by hand</span>
+<span class="c-key">await</span> stagehand.<span class="c-fn">act</span>(<span class="c-str">"enter username test@example.com"</span>);
+<span class="c-key">await</span> stagehand.<span class="c-fn">act</span>(<span class="c-str">"click the login button"</span>);
+
+<span class="c-key">await</span> stagehand.<span class="c-fn">close</span>();</code></pre></div>
+
+      <p class="lead" style="margin-top:30px">
+        <span lang-en>Guide selector generation by dropping a <code>CLAUDE.md</code> skill file in your <code>cwd</code>:</span>
+        <span lang-zh>在 <code>cwd</code> 中放一个 <code>CLAUDE.md</code> skill 文件来指导选择器生成：</span>
+      </p>
+      <div class="codeblock"><pre><code><span class="c-com"># e2e-skills/CLAUDE.md — selector priority ladder</span>
+1. [data-testid="..."]          <span class="c-com"># most stable</span>
+2. [aria-label] / [role] + name
+3. semantic tags: article, nav, footer, h1–h3, time
+4. stable BEM class (no hashes)
+5. :first-of-type / :nth-of-type(n)   <span class="c-com"># positional fallback</span></code></pre></div>
+    </div>
+  </section>
+
+  <!-- ===================== CI ===================== -->
+  <section class="block" id="ci">
+    <div class="wrap center">
+      <span class="eyebrow"><span lang-en>CI integration</span><span lang-zh>CI 集成</span></span>
+      <h2 class="title"><span lang-en>Deterministic, zero-cost CI replay</span><span lang-zh>确定性、零成本的 CI 回放</span></h2>
+      <p class="lead">
+        <span lang-en>Commit <code>.stagehand-cache/</code> to Git. In CI, runs hit the cache exclusively — no Claude Code calls, no cost, millisecond-level execution.</span>
+        <span lang-zh>把 <code>.stagehand-cache/</code> 提交到 Git。CI 中运行完全命中缓存 —— 零 Claude Code 调用、零成本、毫秒级执行。</span>
+      </p>
+      <div class="codeblock" style="text-align:left"><pre><code><span class="c-com"># .github/workflows/e2e.yml</span>
+- <span class="c-key">run</span>: npx playwright install --with-deps chromium
+- <span class="c-key">run</span>: npx playwright test
+  <span class="c-key">env</span>: { CI: <span class="c-str">"true"</span> }   <span class="c-com"># cache hit → no LLM, $0</span></code></pre></div>
+    </div>
+  </section>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="foot">
+    <div class="wrap">
+      <div>
+        <span lang-en>Built with Claude Code · MIT License · © </span>
+        <span lang-zh>由 Claude Code 构建 · MIT 许可证 · © </span>
+        <span id="year">2026</span>
+      </div>
+      <div>
+        <a href="https://github.com/xinyuehtx/cc-stagehand" target="_blank" rel="noopener">GitHub</a> ·
+        <a href="https://www.npmjs.com/package/@tengxiaohtx/stagehand-cc-agent" target="_blank" rel="noopener">npm</a> ·
+        <a href="https://github.com/browserbase/stagehand" target="_blank" rel="noopener">Stagehand</a>
+      </div>
+    </div>
+  </footer>
+
+  <div class="lightbox" id="lightbox"><img src="" alt="" /></div>
+  <script src="./assets/app.js"></script>
+</body>
+</html>

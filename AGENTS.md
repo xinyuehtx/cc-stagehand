@@ -36,6 +36,7 @@ npm test               # playwright test
 npm run test:ui        # playwright test --ui
 npm run test:headed    # playwright test --headed
 npm run test:report    # playwright show-report
+npx playwright test site-capture.spec.ts   # 生成文档站点真实截图 → docs/assets/screenshots
 
 # 类型检查
 npm run typecheck
@@ -48,38 +49,43 @@ npm run typecheck
 │   ├── index.ts                # 公共 API 入口
 │   ├── types.ts                # 类型定义
 │   ├── llm-client.ts           # ClaudeCodeLLMClient
-│   ├── claude-code-model.ts    # ClaudeCodeLanguageModel (内部)
+│   ├── claude-code-model.ts    # ClaudeCodeLanguageModel (claude 内置 provider)
+│   ├── providers/              # 多 Agent Provider（claude / opencode / qodercli）
+│   │   ├── factory.ts          # createLanguageModelProvider
+│   │   ├── opencode.ts
+│   │   ├── qodercli.ts
+│   │   └── types.ts
+│   ├── selector-store.ts       # 内存级 instruction → cssSelector 存储
+│   ├── cache-updater.ts        # 选择器泛化 + processCacheAfterAll
+│   ├── cache-manifest.ts       # 缓存清单（manifest）维护 + TTL
 │   ├── logger.ts               # 双日志策略
 │   ├── self-heal.ts            # SelfHealTracker
 │   └── report.ts               # E2EReport
-├── tests/                      # 单元测试 + 集成测试
-├── examples/                   # 示例（每个含独立 skill 目录）
-│   ├── basic-test/             # 基础 E2E 测试
-│   │   ├── basic-test.spec.ts
-│   │   └── e2e-skills/CLAUDE.md
-│   ├── self-heal/              # 自愈场景
-│   │   ├── self-heal.spec.ts
-│   │   └── e2e-skills/CLAUDE.md
-│   ├── mdn-blog/               # Playwright 集成示例
+├── tests/                      # 单元测试 + 集成测试（vitest）
+├── examples/                   # 示例（每个含独立 e2e-skills 目录）
+│   ├── mdn-blog/               # Stagehand 建浏览器 + Playwright CDP 接入（真实 MDN 网站）
 │   │   ├── mdn-blog.spec.ts    # Playwright 测试
+│   │   ├── site-capture.spec.ts# 文档站点截图生成脚本
 │   │   ├── playwright.config.ts
+│   │   ├── .stagehand-cache/   # 缓存选择器（纳入版本控制，供 CI 回放）
 │   │   └── e2e-skills/CLAUDE.md
-│   └── preheat-selectors/      # 缓存预热脚本
-│       ├── preheat-selectors.ts
+│   └── playwright-cdp/         # Playwright 启动 Chrome + Stagehand 连 CDP（qodercli agent）
+│       ├── playwright-cdp.spec.ts
+│       ├── playwright.config.ts
 │       └── e2e-skills/CLAUDE.md
-├── rfcs/                       # RFC / SPEC / User Story 文档
-│   ├── claude-code-llm-client/ # 已批准的 RFC 文档集
-│   │   ├── rfc.md
-│   │   ├── spec.md
-│   │   └── user-story.md
-│   └── playwright-integration/ # Playwright 集成 RFC
-│       ├── rfc.md
-│       ├── spec.md
-│       └── user-story.md
-├── .github/workflows/          # CI + npm 发布流水线
+├── docs/                       # GitHub Pages 介绍网站（含真实截图）
+│   ├── index.html
+│   └── assets/
+├── rfcs/                       # RFC / SPEC / User Story / Test Cases 文档
+│   ├── claude-code-llm-client/
+│   ├── mdn-blog-e2e/
+│   ├── playwright-integration/
+│   └── selector-generalization/
+├── .github/workflows/          # CI + npm 发布 + Pages 部署流水线
 │   ├── ci.yml
-│   └── publish.yml
-├── README.md                   # 中英文双语 README
+│   ├── publish.yml
+│   └── pages.yml
+├── README.md / README.zh-CN.md # 中英文双语 README
 └── AGENTS.md                   # 本文件（单一可信源）
 ```
 
@@ -294,3 +300,13 @@ test("...", async () => {
    `npm version` 会自动：更新 `package.json` 版本 → 创建 git commit → 创建 git tag（如 `v0.1.1`）
 3. 推送 commit 和 tag：`git push origin main --tags`
 4. GitHub Action (`publish.yml`) 自动发布到 npm
+
+## 文档站点（GitHub Pages）
+
+介绍网站源码位于 `docs/`，纯静态（`index.html` + `assets/`，无构建步骤）。
+
+- **真实截图**：由 `examples/mdn-blog/site-capture.spec.ts` 跑真实流程生成，输出到 `docs/assets/screenshots/`，需提交到仓库。
+- **部署**：`.github/workflows/pages.yml` 在 `main` 分支 `docs/**` 变更时自动部署到 GitHub Pages。
+- **启用方式**：仓库 Settings → Pages → Source 选择 **GitHub Actions**。
+- **访问地址**：`https://xinyuehtx.github.io/cc-stagehand/`
+- **本地预览**：`python3 -m http.server -d docs 8080` 后访问 `http://localhost:8080`。

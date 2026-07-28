@@ -1,6 +1,8 @@
 import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { SelectorStore } from "./selector-store.js";
+import { updateCacheManifest } from "./cache-manifest.js";
+import type { CacheProcessOptions, CacheProcessResult } from "./types.js";
 
 /** 缓存更新选项 */
 export interface CacheUpdateOptions {
@@ -109,4 +111,34 @@ export function generalizeCacheSelectors(options: CacheUpdateOptions): CacheUpda
   }
 
   return result;
+}
+
+/**
+ * 统一缓存后处理函数 — 同时执行选择器泛化和 manifest 更新。
+ * 推荐在 afterAll 中调用。
+ */
+export function processCacheAfterAll(
+  options: CacheProcessOptions
+): CacheProcessResult {
+  // 1. 调用 generalizeCacheSelectors
+  const genResult = generalizeCacheSelectors({
+    cacheDir: options.cacheDir,
+    selectorStore: options.selectorStore as SelectorStore,
+  });
+
+  // 2. 调用 updateCacheManifest
+  const manifestResult = updateCacheManifest({
+    cacheDir: options.cacheDir,
+    selectorStore: options.selectorStore,
+    isFullRun: options.isFullRun,
+    ttlSeconds: options.ttlSeconds,
+  });
+
+  return {
+    generalization: {
+      updatedSelectors: genResult.updatedSelectors,
+      skippedSelectors: genResult.skippedSelectors,
+    },
+    manifest: manifestResult,
+  };
 }

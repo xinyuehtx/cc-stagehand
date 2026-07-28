@@ -1,10 +1,13 @@
 # MDN Blog E2E Testing Skill Context
 
-## 输出格式要求
+> 该文件是「业务 skill 知识库」，Claude Code 在生成选择器时会读取它。
+> 目标：产出**稳定、可泛化、能扛前端重构**的 CSS 选择器。
 
-当你收到浏览器自动化指令时，你 MUST 返回纯 JSON（无 markdown、无解释文本）。
+## 1. 输出格式（MUST）
 
-### act() 响应格式示例
+收到浏览器自动化指令时，**只返回纯 JSON**，不要 markdown 代码块、不要解释文字。
+
+### `act()` 响应格式
 
 ```json
 {
@@ -19,41 +22,54 @@
 }
 ```
 
-**cssSelector 字段规则：**
-- ✅ 必须包含：`"cssSelector": "article:first-of-type footer a"`
-- ✅ 使用语义标签：article, section, footer, header, nav, main
-- ✅ 使用 :first-of-type / :nth-of-type(n) 进行位置区分
-- ❌ 禁止 xpath 格式
-- ❌ 禁止省略此字段
+**`cssSelector` 字段是强制的**：
+- ✅ 必须包含该字段，且为非空字符串
+- ❌ 禁止 `xpath=` 前缀或 `/html/...` 绝对路径
+- ❌ 禁止省略此字段（缺失将被拒绝）
 
-## 选择器策略
+## 2. 选择器优先级阶梯（从高到低）
 
-优先使用语义化 CSS 选择器：
-1. HTML 语义标签（如 `<article>`、`<h2>`、`<time>`）
-2. BEM 风格 CSS class（如 `.blog-post-preview`）
-3. **不要使用 xpath**，始终使用 CSS 选择器
-4. 避免过于具体的复合选择器，优先使用简洁稳定的选择器
+生成 `cssSelector` 时，**从上往下**选择第一个能唯一命中目标的方案：
 
-## 页面结构
+1. **稳定测试属性** — `[data-testid="..."]`、`[data-test="..."]`
+2. **可访问性属性** — `[aria-label="..."]`、`[role="..."]` + 可见名称
+3. **语义化 HTML 标签** — `article`、`section`、`nav`、`header`、`footer`、`main`、`aside`、`h1`~`h3`、`time`
+4. **稳定语义 class** — 具业务含义的 BEM class（如 `.blog-post-preview`），**不含 hash 后缀**
+5. **位置伪类兜底** — `:first-of-type` / `:nth-of-type(n)` 用于区分同类元素
 
-### 博客列表页 (/en-US/blog/)
+> MDN 博客页目前没有 `data-testid`，因此实际以 **第 3~5 档（语义标签 + 位置伪类）** 为主。
 
-- 页面包含多张博客卡片，每张卡片是一个 `<article>` 元素
-- 每张卡片包含：标题（带链接）、作者、发布日期、摘要、Read more 按钮
-- Read more 按钮是一个 `<a>` 标签链接，位于卡片底部，点击后导航到文章详情页
+## 3. 稳定性规则（避免脆弱选择器）
 
-### 博客详情页 (/en-US/blog/{slug}/)
+- ✅ 越短越好：优先 `article:first-of-type footer a`，而非层层嵌套
+- ✅ 用 `:first-of-type` / `:nth-of-type(2)` 表达「第几个」，而非依赖视觉顺序
+- ❌ 不要用带 hash 的 class：`.css-1a2b3c`、`.jsx-98765`
+- ❌ 不要用超过 3 层的后代嵌套：`div > div > div > span > a`
+- ❌ 不要用 `:nth-child()`（对文本节点/注释敏感），改用 `:nth-of-type()`
+- ❌ 不要绑定会变的文案做属性值（除非 `aria-label` 本身稳定）
 
-- 文章标题在页面的 `<h1>` 元素中
-- 正文内容在 `<article>` 元素内的段落中
+## 4. 页面结构参考
 
-## 注意事项
+### 博客列表页 `/en-US/blog/`
+- 每张博客卡片是一个 `<article>` 元素
+- 卡片内含：标题（`<h2><a>`）、作者、发布日期（`<time>`）、摘要、**Read more 链接**（位于卡片底部 `<footer>` 内的 `<a>`）
+- 「第一个卡片的 Read more」→ `article:first-of-type footer a`
 
-- 图片使用 `loading="eager"`，首屏图片直接渲染
-- 页面无 cookie 横幅干扰
-- lit 模板注释（`<!--lit-part-->`）不影响 DOM 查询
+### 博客详情页 `/en-US/blog/{slug}/`
+- 文章标题在 `<h1>`
+- 正文在 `<article>` 内的 `<p>` 段落中
+- 顶部含面包屑导航，可用于断言已进入详情页
 
-## 错误恢复策略
+## 5. 生成前自检（Self-check）
 
-- 如果预期元素未找到，等待 2 秒后重试（页面可能正在加载）
-- 如果某个选择器失效，尝试用更语义化的方式定位元素
+产出 `cssSelector` 前，逐条确认：
+1. 该选择器在当前页面**只命中一个**目标元素？
+2. 是否已选用阶梯中**尽可能靠上**的方案？
+3. 是否**不含** xpath、hash class、`:nth-child`、超深嵌套？
+4. 换一批数据 / 前端小改后，它**是否仍然有效**？
+
+## 6. 错误恢复策略
+
+- 预期元素未找到：等待约 2 秒后重试（页面可能仍在加载）
+- 某选择器失效：回到阶梯上一档，用更语义化的方式重新定位
+- 始终**优先匹配文档结构**，而非视觉位置

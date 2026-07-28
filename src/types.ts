@@ -220,3 +220,78 @@ export interface LLMResponse {
 export interface LLMClient {
   createChatCompletion(options: ChatCompletionOptions): Promise<LLMResponse>;
 }
+
+// ========== Cache Manifest 类型 ==========
+
+/** 缓存清单条目 */
+export interface CacheManifestEntry {
+  /** act 指令文本 */
+  instruction: string;
+  /** 缓存文件名（hash.json） */
+  cacheFile: string;
+  /** 当前 selector 值 */
+  selector: string;
+  /** 关联的页面 URL */
+  url: string;
+  /** 条目首次创建时间（ISO 8601） */
+  createdAt: string;
+  /** 最后使用时间（ISO 8601），每次运行刷新 */
+  lastUsed: string;
+  /** 条目状态 */
+  status: "active" | "orphan" | "expired";
+  /** 是否已泛化为 CSS selector */
+  generalized: boolean;
+}
+
+/** 缓存清单文件结构 */
+export interface CacheManifest {
+  version: number;
+  updatedAt: string;
+  ttlSeconds: number;
+  entries: Record<string, CacheManifestEntry>;
+}
+
+/** updateCacheManifest 选项 */
+export interface UpdateCacheManifestOptions {
+  cacheDir: string;
+  selectorStore: { usedInstructions: ReadonlySet<string>; entries(): IterableIterator<[string, string]> };
+  /** 是否为全量运行（影响孤儿标记） */
+  isFullRun?: boolean;
+  /** TTL（秒），默认 30 天 */
+  ttlSeconds?: number;
+}
+
+/** updateCacheManifest 结果 */
+export interface UpdateCacheManifestResult {
+  /** manifest 文件路径 */
+  manifestPath: string;
+  /** 总条目数 */
+  totalEntries: number;
+  /** 新增条目 */
+  added: number;
+  /** 更新条目（刷新 lastUsed） */
+  refreshed: number;
+  /** 标记孤儿 */
+  orphaned: number;
+  /** 标记过期 */
+  expired: number;
+}
+
+/** processCacheAfterAll 选项（统一后处理） */
+export interface CacheProcessOptions {
+  cacheDir: string;
+  selectorStore: { usedInstructions: ReadonlySet<string>; entries(): IterableIterator<[string, string]> };
+  isFullRun?: boolean;
+  ttlSeconds?: number;
+}
+
+/** processCacheAfterAll 结果 */
+export interface CacheProcessResult {
+  /** 泛化结果 */
+  generalization: {
+    updatedSelectors: number;
+    skippedSelectors: number;
+  };
+  /** Manifest 结果 */
+  manifest: UpdateCacheManifestResult;
+}
