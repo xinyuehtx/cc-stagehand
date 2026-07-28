@@ -73,8 +73,20 @@ export function updateCacheManifest(
     return result;
   }
 
-  // 3. 构建 usedInstructions 快速查找
-  const usedInstructions = selectorStore.usedInstructions;
+  // 3. 构建「本次运行使用的 instruction」集合。
+  //    ⚠️ selectorStore.usedInstructions 仅在缓存 MISS（真正调用 LLM）时填充；
+  //    缓存 HIT 时 Stagehand 直接确定性回放，不经过 LLMClient，该集合会漏掉命中项。
+  //    因此：
+  //    - 若调用方显式提供 usedInstructions（权威集合），据此刷新并标记 orphan；
+  //    - 否则回退到 store 的集合，且【不】标记 orphan，避免把仍在使用（命中缓存）
+  //      的条目误标为孤儿导致误删。
+  const providedUsed = options.usedInstructions
+    ? new Set(Array.from(options.usedInstructions, (s) => s.trim()))
+    : undefined;
+  const usedInstructions: ReadonlySet<string> =
+    providedUsed ?? selectorStore.usedInstructions;
+  const canMarkOrphan = providedUsed !== undefined;
+  const orphanedThisRun = new Set<string>();
 
   // 4. 处理每个缓存文件
   for (const file of files) {
@@ -100,20 +112,21 @@ export function updateCacheManifest(
       // 已存在的条目
       const entry = manifest.entries[key];
       if (usedInstructions.has(instruction)) {
-        // 本次运行使用了 → 刷新
+        // 本次运行使用了（命中或未命中）→ 刷新
         entry.lastUsed = now;
         entry.status = "active";
         entry.selector = selector;
         entry.generalized = generalized;
         result.refreshed++;
-      } else if (isFullRun) {
-        // 全量运行但未使用 → 标记 orphan
+      } else if (isFullRun && canMarkOrphan) {
+        // 全量运行 + 权威 used 集合中未包含 → 标记 orphan
         if (entry.status === "active") {
           entry.status = "orphan";
+          orphanedThisRun.add(key);
           result.orphaned++;
         }
       }
-      // 部分运行且未使用 → 保持原状
+      // 未提供权威 used 集合 / 部分运行 / 未使用 → 保持原状
     } else {
       // 新增条目
       manifest.entries[key] = {
@@ -133,12 +146,16 @@ export function updateCacheManifest(
   // 5. TTL 过期检查
   const ttlMs = ttlSeconds * 1000;
   const nowMs = Date.now();
-  for (const [_key, entry] of Object.entries(manifest.entries)) {
+  for (const [key, entry] of Object.entries(manifest.entries)) {
     if (entry.status === "expired") continue;
     const lastUsedMs = new Date(entry.lastUsed).getTime();
     if (nowMs - lastUsedMs > ttlMs) {
       entry.status = "expired";
       result.expired++;
+      // 若同一条目本次刚被标记为 orphan，改记为 expired，避免重复计数
+      if (orphanedThisRun.has(key)) {
+        result.orphaned--;
+      }
     }
   }
 

@@ -65,6 +65,7 @@ test.describe("Site screenshot capture", () => {
           selectorStore: llmClient.selectorStore,
           isFullRun: true,
           ttlSeconds: 30 * 24 * 3600,
+          usedInstructions: ["点击第一个博客卡片的 Read more 按钮"],
         });
         // 导出一份 manifest/selector 摘要，供网站展示缓存效果
         writeFileSync(

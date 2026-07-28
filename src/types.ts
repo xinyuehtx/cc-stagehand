@@ -259,6 +259,13 @@ export interface UpdateCacheManifestOptions {
   isFullRun?: boolean;
   /** TTL（秒），默认 30 天 */
   ttlSeconds?: number;
+  /**
+   * 本次运行**权威**使用到的 act 指令列表。
+   * 由于缓存命中时不经过 LLMClient，`selectorStore.usedInstructions` 会漏掉命中项；
+   * 提供该列表后，manifest 才能正确刷新命中条目并标记真正的孤儿。
+   * 未提供时不会标记 orphan（安全降级，避免误删）。
+   */
+  usedInstructions?: Iterable<string>;
 }
 
 /** updateCacheManifest 结果 */
@@ -283,6 +290,11 @@ export interface CacheProcessOptions {
   selectorStore: { usedInstructions: ReadonlySet<string>; entries(): IterableIterator<[string, string]> };
   isFullRun?: boolean;
   ttlSeconds?: number;
+  /**
+   * 本次运行权威使用到的 act 指令列表（推荐传入，用于正确的孤儿检测）。
+   * 见 {@link UpdateCacheManifestOptions.usedInstructions}。
+   */
+  usedInstructions?: Iterable<string>;
 }
 
 /** processCacheAfterAll 结果 */

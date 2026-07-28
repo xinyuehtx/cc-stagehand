@@ -48,7 +48,9 @@ export function generalizeCacheSelectors(options: CacheUpdateOptions): CacheUpda
 
   let files: string[];
   try {
-    files = readdirSync(cacheDir).filter((f) => f.endsWith(".json"));
+    files = readdirSync(cacheDir).filter(
+      (f) => f.endsWith(".json") && f !== "manifest.json"
+    );
   } catch {
     return result;
   }
@@ -72,14 +74,19 @@ export function generalizeCacheSelectors(options: CacheUpdateOptions): CacheUpda
       ? content.instruction.trim()
       : undefined;
 
-    // 精确匹配 → 模糊匹配（SelectorStore key 可能包含 cache instruction 作为子串）
+    // 精确匹配优先；无精确匹配时使用**安全**模糊匹配：
+    // 仅当所有子串候选都指向同一个 selector（唯一）时才采用，
+    // 出现歧义则跳过，避免把某指令的 selector 张冠李戴到另一指令上。
     let cssSelector = instruction ? selectorStore.get(instruction) : undefined;
     if (!cssSelector && instruction) {
+      const candidates = new Set<string>();
       for (const [key, value] of selectorStore.entries()) {
         if (key.includes(instruction) || instruction.includes(key)) {
-          cssSelector = value;
-          break;
+          candidates.add(value);
         }
+      }
+      if (candidates.size === 1) {
+        cssSelector = candidates.values().next().value;
       }
     }
 
@@ -132,6 +139,7 @@ export function processCacheAfterAll(
     selectorStore: options.selectorStore,
     isFullRun: options.isFullRun,
     ttlSeconds: options.ttlSeconds,
+    usedInstructions: options.usedInstructions,
   });
 
   return {

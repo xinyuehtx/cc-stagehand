@@ -55,6 +55,9 @@ test.describe("MDN Blog E2E Tests", () => {
           selectorStore: llmClient.selectorStore,
           isFullRun: true,
           ttlSeconds: 30 * 24 * 3600,
+          // 权威的「本次运行使用到的 act 指令」列表：
+          // 缓存命中时不经过 LLMClient，必须显式声明才能正确刷新/标记孤儿。
+          usedInstructions: ["点击第一个博客卡片的 Read more 按钮"],
         });
         console.log(
           `缓存后处理完成: ${result.generalization.updatedSelectors} 个选择器泛化, ` +

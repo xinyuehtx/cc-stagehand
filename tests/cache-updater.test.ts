@@ -120,4 +120,52 @@ describe("generalizeCacheSelectors", () => {
     });
     expect(result.totalFiles).toBe(0);
   });
+
+  it("模糊匹配存在歧义时跳过（不张冠李戴）", () => {
+    // 缓存文件指令 "click submit" 无精确匹配；
+    // store 中有两个不同 selector 的子串候选 → 歧义 → 应跳过，保留原 xpath。
+    writeCacheFile("test.json", {
+      version: 1,
+      instruction: "click submit",
+      actions: [{ selector: "xpath=/html[1]/body[1]/button[1]", method: "click", arguments: [] }],
+    });
+    store.set("click submit button", "button.primary");
+    store.set("please click submit now", "button.secondary");
+
+    const result = generalizeCacheSelectors({ cacheDir: tempDir, selectorStore: store });
+
+    expect(result.updatedSelectors).toBe(0);
+    expect(result.skippedSelectors).toBe(1);
+    const unchanged = readCacheFile("test.json");
+    expect(unchanged.actions[0].selector).toBe("xpath=/html[1]/body[1]/button[1]");
+  });
+
+  it("模糊匹配唯一候选时正常替换", () => {
+    writeCacheFile("test.json", {
+      version: 1,
+      instruction: "click submit",
+      actions: [{ selector: "xpath=/html[1]/body[1]/button[1]", method: "click", arguments: [] }],
+    });
+    store.set("click submit button", "button.primary");
+
+    const result = generalizeCacheSelectors({ cacheDir: tempDir, selectorStore: store });
+
+    expect(result.updatedSelectors).toBe(1);
+    const updated = readCacheFile("test.json");
+    expect(updated.actions[0].selector).toBe("button.primary");
+  });
+
+  it("扫描时排除 manifest.json", () => {
+    writeCacheFile("test.json", {
+      version: 1,
+      instruction: "点击按钮",
+      actions: [{ selector: "article a", method: "click", arguments: [] }],
+    });
+    writeCacheFile("manifest.json", { version: 1, entries: {} });
+
+    const result = generalizeCacheSelectors({ cacheDir: tempDir, selectorStore: store });
+
+    // 只应计入 test.json，不含 manifest.json
+    expect(result.totalFiles).toBe(1);
+  });
 });

@@ -55,7 +55,7 @@ describe("updateCacheManifest", () => {
   });
 
   describe("全量运行标记 orphan", () => {
-    it("manifest 中有条目但 usedInstructions 不包含 → status 变为 orphan", () => {
+    it("提供权威 usedInstructions 且不含该指令 → status 变为 orphan", () => {
       // 先创建一个已有条目的 manifest
       writeCacheFile("abc123.json", {
         instruction: "click the login button",
@@ -85,17 +85,113 @@ describe("updateCacheManifest", () => {
         JSON.stringify(existingManifest, null, 2)
       );
 
-      // store 中没有标记 "click the login button" 为已使用
+      // 权威 used 集合为空（本次运行未使用任何指令）→ 该条目应被标记为 orphan
       const result = updateCacheManifest({
         cacheDir: tempDir,
         selectorStore: store,
         isFullRun: true,
+        usedInstructions: [],
       });
 
       expect(result.orphaned).toBe(1);
 
       const manifest = readManifest();
       expect(manifest.entries["abc123"].status).toBe("orphan");
+    });
+  });
+
+  describe("缓存命中安全：不误标 orphan", () => {
+    it("未提供 usedInstructions（模拟全量缓存命中）→ 不标记 orphan，保持 active", () => {
+      // 场景：所有 act() 均缓存命中 → selectorStore.usedInstructions 为空。
+      // 若仍据此标记 orphan，会把仍在使用的条目误删。此处验证安全降级。
+      writeCacheFile("abc123.json", {
+        instruction: "click the login button",
+        url: "https://example.com",
+        actions: [{ selector: "button.login", method: "click" }],
+      });
+
+      const now = new Date().toISOString();
+      const existingManifest: CacheManifest = {
+        version: 1,
+        updatedAt: now,
+        ttlSeconds: 30 * 24 * 3600,
+        entries: {
+          abc123: {
+            instruction: "click the login button",
+            cacheFile: "abc123.json",
+            selector: "button.login",
+            url: "https://example.com",
+            createdAt: now,
+            lastUsed: now,
+            status: "active",
+            generalized: true,
+          },
+        },
+      };
+      writeFileSync(
+        join(tempDir, "manifest.json"),
+        JSON.stringify(existingManifest, null, 2)
+      );
+
+      // isFullRun=true 但未提供权威 usedInstructions，store 也为空
+      const result = updateCacheManifest({
+        cacheDir: tempDir,
+        selectorStore: store,
+        isFullRun: true,
+      });
+
+      expect(result.orphaned).toBe(0);
+
+      const manifest = readManifest();
+      expect(manifest.entries["abc123"].status).toBe("active");
+    });
+
+    it("提供权威 usedInstructions 且包含该指令（模拟命中但已声明使用）→ 刷新，不孤儿", () => {
+      writeCacheFile("abc123.json", {
+        instruction: "click the login button",
+        url: "https://example.com",
+        actions: [{ selector: "button.login", method: "click" }],
+      });
+
+      const oldTime = "2024-01-01T00:00:00.000Z";
+      const existingManifest: CacheManifest = {
+        version: 1,
+        updatedAt: oldTime,
+        ttlSeconds: 30 * 24 * 3600,
+        entries: {
+          abc123: {
+            instruction: "click the login button",
+            cacheFile: "abc123.json",
+            selector: "button.login",
+            url: "https://example.com",
+            createdAt: oldTime,
+            lastUsed: oldTime,
+            status: "active",
+            generalized: true,
+          },
+        },
+      };
+      writeFileSync(
+        join(tempDir, "manifest.json"),
+        JSON.stringify(existingManifest, null, 2)
+      );
+
+      const beforeRun = Date.now();
+      // store 为空（命中缓存），但调用方权威声明该指令被使用
+      const result = updateCacheManifest({
+        cacheDir: tempDir,
+        selectorStore: store,
+        isFullRun: true,
+        usedInstructions: ["click the login button"],
+      });
+
+      expect(result.refreshed).toBe(1);
+      expect(result.orphaned).toBe(0);
+
+      const manifest = readManifest();
+      expect(manifest.entries["abc123"].status).toBe("active");
+      const lastUsedTime = new Date(manifest.entries["abc123"].lastUsed).getTime();
+      expect(lastUsedTime).toBeGreaterThanOrEqual(beforeRun);
     });
   });
 
