@@ -94,6 +94,25 @@ await stagehand.close();
 - 用户名输入: `[data-testid="email-input"]` 或 `[name="email"]`
 ```
 
+## 内置 Skill
+
+本包在 [`skills/`](skills/) 下内置了开箱即用的通用 skill，无需从零编写：
+
+| Skill | 作用 |
+|-------|------|
+| [`selector-recognition`](skills/selector-recognition/CLAUDE.md) | 为 `act()` 生成稳定、可泛化、抗前端重构的 CSS 选择器 |
+| [`e2e-authoring`](skills/e2e-authoring/CLAUDE.md) | 编写高质量、低 flaky 的 E2E 用例（Playwright + Stagehand 最佳实践） |
+
+把某个 skill 目录设为 `cwd`，或拷贝到你自己的 skill 目录再补充站点页面结构：
+
+```ts
+createClaudeCodeLLMClient({
+  cwd: "node_modules/@tengxiaohtx/stagehand-cc-agent/skills/selector-recognition",
+});
+```
+
+详见 [`skills/README.md`](skills/README.md)。
+
 ## API 参考
 
 ### `createClaudeCodeLLMClient(options?)`

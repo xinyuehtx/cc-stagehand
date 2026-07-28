@@ -94,6 +94,25 @@ Place a `CLAUDE.md` in your skill directory to guide selector generation:
 - Username input: `[data-testid="email-input"]` or `[name="email"]`
 ```
 
+## Built-in Skills
+
+The package ships reusable, general-purpose skills under [`skills/`](skills/) so you don't have to write skill docs from scratch:
+
+| Skill | Purpose |
+|-------|---------|
+| [`selector-recognition`](skills/selector-recognition/CLAUDE.md) | Generate stable, generalizable, refactor-resistant CSS selectors for `act()` |
+| [`e2e-authoring`](skills/e2e-authoring/CLAUDE.md) | Author high-quality, low-flake E2E tests (Playwright + Stagehand best practices) |
+
+Point `cwd` at one, or copy it into your own skill dir and add your site's page structure:
+
+```ts
+createClaudeCodeLLMClient({
+  cwd: "node_modules/@tengxiaohtx/stagehand-cc-agent/skills/selector-recognition",
+});
+```
+
+See [`skills/README.md`](skills/README.md) for details.
+
 ## API Reference
 
 ### `createClaudeCodeLLMClient(options?)`

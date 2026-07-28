@@ -73,6 +73,10 @@ npm run typecheck
 │       ├── playwright-cdp.spec.ts
 │       ├── playwright.config.ts
 │       └── e2e-skills/CLAUDE.md
+├── skills/                     # 内置通用 skill（随 npm 包发布）
+│   ├── selector-recognition/   # 通用稳定选择器识别 skill
+│   ├── e2e-authoring/          # E2E 用例编写 skill（Playwright + Stagehand 最佳实践）
+│   └── README.md
 ├── docs/                       # GitHub Pages 介绍网站（含真实截图）
 │   ├── index.html
 │   └── assets/
